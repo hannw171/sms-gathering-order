@@ -1,0 +1,79 @@
+<?php
+
+namespace App\Http\Controllers\Guest;
+
+use App\Http\Controllers\Controller;
+use App\Models\EventSetting;
+use App\Models\Manufacturer;
+use App\Models\Pharmacy;
+use App\Models\Product;
+use App\Services\GatheringService;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class CatalogController extends Controller
+{
+    public function __construct(
+        protected GatheringService $gatheringService
+    ) {}
+
+    public function index(Request $request): Response|\Illuminate\Http\RedirectResponse
+    {
+        $pharmacyId = $request->session()->get('guest_pharmacy_id');
+        if (!$pharmacyId) {
+            return redirect()->route('guest.login');
+        }
+
+        $pharmacy = Pharmacy::find($pharmacyId);
+        if (!$pharmacy) {
+            $request->session()->forget('guest_pharmacy_id');
+            return redirect()->route('guest.login');
+        }
+
+        $manufacturers = Manufacturer::where('is_active', true)
+            ->orderBy('sort_order', 'asc')
+            ->get();
+
+        $query = Product::with('manufacturer')
+            ->where('is_active', true);
+
+        if ($request->filled('manufacturer')) {
+            $slug = $request->manufacturer;
+            if ($slug !== 'semua') {
+                $query->whereHas('manufacturer', function ($q) use ($slug) {
+                    $q->where('slug', $slug);
+                });
+            }
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhere('sku', 'like', "%{$search}%");
+            });
+        }
+
+        $products = $query->orderBy('name', 'asc')->get();
+
+        // Milestone and Reward Tracker Data
+        $milestone = $this->gatheringService->getPharmacyMilestone($pharmacy);
+        $eventSetting = EventSetting::current();
+
+        return Inertia::render('Guest/Catalog', [
+            'pharmacy' => $milestone['pharmacy'],
+            'milestone' => $milestone,
+            'manufacturers' => $manufacturers,
+            'products' => $products,
+            'selectedManufacturer' => $request->input('manufacturer', 'semua'),
+            'searchQuery' => $request->input('search', ''),
+            'event' => [
+                'name' => $eventSetting->event_name,
+                'session_end_at' => $eventSetting->session_end_at,
+                'is_ordering_active' => $eventSetting->is_ordering_active,
+            ],
+        ]);
+    }
+}

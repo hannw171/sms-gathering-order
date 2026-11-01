@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Surface / Background */
+    --color-bg-canvas: #FAF8FF;
+    --color-bg-surface: #FFFFFF;
+    --color-bg-surface-elevated: #FFFFFF;
+    --color-bg-muted: #F1F5F9;
+
+    /* Text & Icons */
+    --color-text-primary: #0F172A;
+    --color-text-secondary: #475569;
+    --color-text-muted: #94A3B8;
+    --color-text-inverse: #FFFFFF;
+
+    /* Borders */
+    --color-border-subtle: #E2E8F0;
+    --color-border-strong: #CBD5E1;
+    --color-border-focus: #1565C0;
+
+    /* Actions & Interactions */
+    --color-action-primary: #1565C0;
+    --color-action-primary-hover: #0D47A1;
+    --color-action-primary-fg: #FFFFFF;
+    --color-action-light-tint: #E3F2FD;
+    --color-action-container-text: #DAE5FF;
+
+    /* Rewards & Progress */
+    --color-reward-track: #E2E8F0;
+    --color-reward-fill-start: #10B981;
+    --color-reward-fill-end: #1565C0;
+    --color-reward-surface: #ECFDF5;
+    --color-reward-border: #A7F3D0;
+    --color-reward-text: #065F46;
+
+    /* Feedback */
+    --color-feedback-danger-bg: #FEF2F2;
+    --color-feedback-danger-border: #FECACA;
+    --color-feedback-danger-fg: #DC2626;
+    --color-feedback-warning-bg: #FFFBEB;
+    --color-feedback-warning-border: #FDE68A;
+    --color-feedback-warning-fg: #D97706;
+  }
+
+  /* Stage Projector Display (1920x1080 / 1280x1024) */
+  [data-theme="stage-display"] {
+    --color-stage-bg: #090D16;
+    --color-stage-card-bg: rgba(30, 41, 59, 0.70);
+    --color-stage-card-border: rgba(255, 255, 255, 0.10);
+    --color-stage-card-hover: rgba(51, 65, 85, 0.80);
+
+    --color-stage-text-primary: #F8FAFC;
+    --color-stage-text-secondary: #94A3B8;
+    --color-stage-text-gold: #FCD34D;
+
+    --color-stage-podium-1: #F59E0B;
+    --color-stage-podium-1-glow: rgba(245, 158, 11, 0.35);
+    --color-stage-podium-2: #CBD5E1;
+    --color-stage-podium-2-glow: rgba(203, 213, 225, 0.25);
+    --color-stage-podium-3: #D97706;
+    --color-stage-podium-3-glow: rgba(217, 119, 6, 0.25);
+
+    --color-stage-ticker-bg: rgba(15, 23, 42, 0.95);
+    --color-stage-ticker-border: rgba(245, 158, 11, 0.25);
+  }
+
+  body {
+    background-color: var(--color-bg-canvas);
+    color: var(--color-text-primary);
+    font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+.animate-marquee {
+  display: inline-block;
+  white-space: nowrap;
+  animation: marquee 25s linear infinite;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
