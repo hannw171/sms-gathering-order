@@ -14,6 +14,19 @@ export function formatRupiah(amount) {
 }
 
 /**
+ * Format raw number with Indonesian thousands separator (without Rp prefix)
+ * e.g. 1450000 -> "1.450.000"
+ */
+export function formatNumber(amount) {
+  if (amount === undefined || amount === null || isNaN(amount)) {
+    return '0';
+  }
+  return new Intl.NumberFormat('id-ID', {
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+/**
  * Format remaining seconds into HH:MM:SS or MM:SS
  */
 export function formatCountdown(targetDate) {

@@ -24,11 +24,6 @@ export default function GuestLayout({ children, pharmacy, milestone, title }) {
                 <span className="font-semibold text-[15px] text-brand-900 truncate tracking-tight">
                   {pharmacy.name}
                 </span>
-                {pharmacy.table_number && (
-                  <span className="bg-slate-100 text-slate-600 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">
-                    {pharmacy.table_number}
-                  </span>
-                )}
               </div>
               {milestone && (
                 <div className="flex items-center gap-1.5 mt-0.5">

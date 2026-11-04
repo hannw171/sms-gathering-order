@@ -6,7 +6,24 @@ export function useCart() {
   const [cart, setCart] = useState(() => {
     try {
       const saved = localStorage.getItem(CART_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : {};
+      if (!saved) return {};
+      const parsed = JSON.parse(saved);
+      // Clean and sanitize stored items to ensure data integrity
+      const sanitized = {};
+      for (const [id, item] of Object.entries(parsed)) {
+        if (item && item.name && !isNaN(item.price) && item.quantity > 0) {
+          sanitized[id] = {
+            product_id: parseInt(item.product_id || id, 10),
+            name: String(item.name),
+            sku: item.sku || '',
+            uom: item.uom || 'Box',
+            price: Number(item.price) || 0,
+            manufacturer_name: item.manufacturer_name || '',
+            quantity: Math.max(1, parseInt(item.quantity, 10) || 1),
+          };
+        }
+      }
+      return sanitized;
     } catch {
       return {};
     }
@@ -20,22 +37,67 @@ export function useCart() {
     }
   }, [cart]);
 
-  const updateQuantity = (product, newQty) => {
+  /**
+   * Update quantity of an item with guaranteed data integrity.
+   * Handles:
+   * 1. Full product objects from Catalog
+   * 2. Existing cart item references
+   * 3. ID-only updates
+   */
+  const updateQuantity = (productOrId, newQty) => {
+    const productId =
+      typeof productOrId === 'object' && productOrId !== null
+        ? productOrId.id ?? productOrId.product_id
+        : productOrId;
+
+    if (!productId) return;
+
+    const parsedQty = parseInt(newQty, 10);
+    const validQty = isNaN(parsedQty) ? 0 : parsedQty;
+
     setCart((prev) => {
       const next = { ...prev };
-      if (newQty <= 0) {
-        delete next[product.id];
-      } else {
-        next[product.id] = {
-          product_id: product.id,
-          name: product.name,
-          sku: product.sku,
-          uom: product.uom,
-          price: parseFloat(product.price),
-          manufacturer_name: product.manufacturer?.name || '',
-          quantity: newQty,
+      const existing = prev[productId];
+
+      if (validQty <= 0) {
+        delete next[productId];
+        return next;
+      }
+
+      // If the item is already in the cart, ALWAYS preserve existing fields!
+      if (existing) {
+        const itemObj = typeof productOrId === 'object' && productOrId !== null ? productOrId : {};
+        next[productId] = {
+          product_id: productId,
+          name: itemObj.name || existing.name,
+          sku: itemObj.sku || existing.sku,
+          uom: itemObj.uom || existing.uom,
+          price: !isNaN(parseFloat(itemObj.price)) ? parseFloat(itemObj.price) : existing.price,
+          manufacturer_name:
+            itemObj.manufacturer?.name || itemObj.manufacturer_name || existing.manufacturer_name,
+          quantity: validQty,
+        };
+      } else if (typeof productOrId === 'object' && productOrId !== null && productOrId.name) {
+        // First-time addition from catalog
+        next[productId] = {
+          product_id: productId,
+          name: productOrId.name,
+          sku: productOrId.sku || '',
+          uom: productOrId.uom || 'Box',
+          price: !isNaN(parseFloat(productOrId.price)) ? parseFloat(productOrId.price) : 0,
+          manufacturer_name: productOrId.manufacturer?.name || productOrId.manufacturer_name || '',
+          quantity: validQty,
         };
       }
+
+      return next;
+    });
+  };
+
+  const removeItem = (productId) => {
+    setCart((prev) => {
+      const next = { ...prev };
+      delete next[productId];
       return next;
     });
   };
@@ -50,8 +112,11 @@ export function useCart() {
   };
 
   const cartItems = Object.values(cart);
-  const totalItems = cartItems.reduce((acc, item) => acc + item.quantity, 0);
-  const totalAmount = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const totalItems = cartItems.reduce((acc, item) => acc + (parseInt(item.quantity, 10) || 0), 0);
+  const totalAmount = cartItems.reduce(
+    (acc, item) => acc + (parseFloat(item.price) || 0) * (parseInt(item.quantity, 10) || 0),
+    0
+  );
 
   return {
     cart,
@@ -60,6 +125,7 @@ export function useCart() {
     totalAmount,
     getItemQuantity,
     updateQuantity,
+    removeItem,
     clearCart,
   };
 }

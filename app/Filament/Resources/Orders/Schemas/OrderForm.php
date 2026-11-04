@@ -3,8 +3,8 @@
 namespace App\Filament\Resources\Orders\Schemas;
 
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 
 class OrderForm
@@ -20,7 +20,8 @@ class OrderForm
                     ->required(),
                 TextInput::make('total_amount')
                     ->required()
-                    ->numeric(),
+                    ->numeric()
+                    ->prefix('Rp'),
                 TextInput::make('total_items')
                     ->required()
                     ->numeric()

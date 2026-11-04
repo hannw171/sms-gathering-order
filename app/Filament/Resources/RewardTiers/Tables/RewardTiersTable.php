@@ -20,7 +20,7 @@ class RewardTiersTable
                 TextColumn::make('name')
                     ->searchable(),
                 TextColumn::make('min_spending')
-                    ->numeric()
+                    ->money('IDR', locale: 'id')
                     ->sortable(),
                 TextColumn::make('reward_description')
                     ->searchable(),

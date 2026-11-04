@@ -17,7 +17,6 @@ class PharmacyForm
                     ->required(),
                 TextInput::make('customer_code')
                     ->required(),
-                TextInput::make('table_number'),
                 TextInput::make('owner_name'),
                 TextInput::make('phone')
                     ->tel(),

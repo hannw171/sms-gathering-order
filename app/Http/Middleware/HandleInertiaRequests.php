@@ -31,8 +31,22 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
+            'app' => [
+                'name' => config('app.name'),
+                'env' => app()->environment(),
+                'is_production' => app()->isProduction(),
+            ],
             'auth' => [
                 'user' => $request->user(),
+            ],
+            'flash' => [
+                'conflict' => $request->session()->get('conflict'),
+                'conflictData' => $request->session()->get('conflictData'),
+                'notFound' => $request->session()->get('notFound'),
+                'searchedQuery' => $request->session()->get('searchedQuery'),
+                'suggestions' => $request->session()->get('suggestions'),
+                'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
             ],
         ];
     }

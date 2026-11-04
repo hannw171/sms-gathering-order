@@ -19,13 +19,16 @@ class StageController extends Controller
     public function index(): Response
     {
         $eventSetting = EventSetting::current();
-        $leaderboard = $this->gatheringService->getLeaderboard();
+        $leaderboardData = $this->gatheringService->getAllLeaderboards();
 
         $totalGmv = (float) Order::where('status', '!=', 'cancelled')->sum('total_amount');
         $totalOrders = (int) Order::where('status', '!=', 'cancelled')->count();
 
         return Inertia::render('Stage/Leaderboard', [
-            'leaderboard' => $leaderboard,
+            'leaderboard' => $leaderboardData['overall'],
+            'leaderboards_by_manufacturer' => $leaderboardData['by_manufacturer'],
+            'stats_by_manufacturer' => $leaderboardData['stats_by_manufacturer'],
+            'manufacturers' => $leaderboardData['manufacturers'],
             'stats' => [
                 'total_gmv' => $totalGmv,
                 'total_orders' => $totalOrders,
@@ -44,13 +47,16 @@ class StageController extends Controller
     public function data(): JsonResponse
     {
         $eventSetting = EventSetting::current();
-        $leaderboard = $this->gatheringService->getLeaderboard();
+        $leaderboardData = $this->gatheringService->getAllLeaderboards();
 
         $totalGmv = (float) Order::where('status', '!=', 'cancelled')->sum('total_amount');
         $totalOrders = (int) Order::where('status', '!=', 'cancelled')->count();
 
         return response()->json([
-            'leaderboard' => $leaderboard,
+            'leaderboard' => $leaderboardData['overall'],
+            'leaderboards_by_manufacturer' => $leaderboardData['by_manufacturer'],
+            'stats_by_manufacturer' => $leaderboardData['stats_by_manufacturer'],
+            'manufacturers' => $leaderboardData['manufacturers'],
             'stats' => [
                 'total_gmv' => $totalGmv,
                 'total_orders' => $totalOrders,

@@ -19,12 +19,14 @@ class Order extends Model
         'unlocked_reward_tier_id',
         'status',
         'notes',
+        'reward_selections',
         'ip_address',
     ];
 
     protected $casts = [
         'total_amount' => 'decimal:2',
         'total_items' => 'integer',
+        'reward_selections' => 'array',
     ];
 
     public function pharmacy(): BelongsTo

@@ -16,6 +16,7 @@ class GatheringTest extends TestCase
     use RefreshDatabase;
 
     protected Pharmacy $pharmacy;
+
     protected Product $product;
 
     protected function setUp(): void
@@ -40,7 +41,6 @@ class GatheringTest extends TestCase
         $this->pharmacy = Pharmacy::create([
             'name' => 'Apotek Kimia Mandiri',
             'customer_code' => 'APT-001',
-            'table_number' => 'Meja 08',
         ]);
 
         RewardTier::create([
@@ -65,6 +65,47 @@ class GatheringTest extends TestCase
 
         $response->assertRedirect('/katalog');
         $this->assertEquals($this->pharmacy->id, session('guest_pharmacy_id'));
+    }
+
+    public function test_device_conflict_triggered_when_active_on_another_device(): void
+    {
+        $this->pharmacy->update([
+            'device_session_token' => 'another-active-session-id',
+            'device_name' => 'Chrome Mobile • Samsung S23',
+        ]);
+
+        $response = $this->post('/login-guest', [
+            'customer_code' => 'APT-001',
+        ]);
+
+        $response->assertSessionHas('conflict', true);
+        $response->assertSessionHas('conflictData');
+        $this->assertNull(session('guest_pharmacy_id'));
+    }
+
+    public function test_guest_can_force_takeover_conflicted_session(): void
+    {
+        $this->pharmacy->update([
+            'device_session_token' => 'another-active-session-id',
+        ]);
+
+        $response = $this->post('/login-guest', [
+            'customer_code' => 'APT-001',
+            'force_takeover' => true,
+        ]);
+
+        $response->assertRedirect('/katalog');
+        $this->assertEquals($this->pharmacy->id, session('guest_pharmacy_id'));
+    }
+
+    public function test_guest_login_returns_not_found_on_invalid_code(): void
+    {
+        $response = $this->post('/login-guest', [
+            'customer_code' => 'KODE-PALSU-999',
+        ]);
+
+        $response->assertSessionHas('notFound', true);
+        $response->assertSessionHasErrors('customer_code');
     }
 
     public function test_guest_can_view_catalog_when_logged_in(): void
@@ -92,7 +133,57 @@ class GatheringTest extends TestCase
         $this->assertNotNull($order);
         $this->assertEquals(600000, $order->total_amount);
         $this->assertEquals(3, $order->total_items);
-        $response->assertRedirect('/order/sukses/' . $order->id);
+        $response->assertRedirect('/order/sukses/'.$order->id);
+    }
+
+    public function test_guest_can_preview_rewards_in_cart(): void
+    {
+        $response = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->postJson('/keranjang/preview-rewards', [
+                'items' => [
+                    [
+                        'product_id' => $this->product->id,
+                        'quantity' => 2,
+                        'price' => 200000,
+                    ],
+                ],
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'projected',
+                'unlocked_now',
+            ]);
+    }
+
+    public function test_guest_can_checkout_with_reward_selections_and_view_success(): void
+    {
+        $response = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->post('/checkout', [
+                'items' => [
+                    [
+                        'product_id' => $this->product->id,
+                        'quantity' => 5,
+                    ],
+                ],
+                'notes' => 'Pesanan dengan pilihan hadiah',
+                'reward_selections' => [
+                    [
+                        'manufacturer_slug' => 'interbat',
+                        'selected_option' => 'Elektrik Kettle',
+                    ],
+                ],
+            ]);
+
+        $order = Order::latest()->first();
+        $this->assertNotNull($order);
+        $this->assertIsArray($order->reward_selections);
+        $this->assertEquals('Elektrik Kettle', $order->reward_selections[0]['selected_option']);
+
+        $successResponse = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->get('/order/sukses/'.$order->id);
+
+        $successResponse->assertStatus(200);
     }
 
     public function test_stage_leaderboard_page_and_api(): void
@@ -104,6 +195,9 @@ class GatheringTest extends TestCase
         $apiResponse->assertStatus(200)
             ->assertJsonStructure([
                 'leaderboard',
+                'leaderboards_by_manufacturer',
+                'stats_by_manufacturer',
+                'manufacturers',
                 'stats' => ['total_gmv', 'total_orders'],
                 'event',
             ]);

@@ -13,19 +13,24 @@ class Pharmacy extends Model
     protected $fillable = [
         'name',
         'customer_code',
-        'table_number',
         'owner_name',
         'phone',
         'city',
         'sales_pic',
         'device_session_token',
+        'device_name',
+        'last_active_at',
         'is_checked_in',
         'checked_in_at',
+        'reward_handed_over_at',
+        'reward_receiver_name',
+        'reward_handover_notes',
     ];
 
     protected $casts = [
         'is_checked_in' => 'boolean',
         'checked_in_at' => 'datetime',
+        'reward_handed_over_at' => 'datetime',
     ];
 
     public function orders(): HasMany

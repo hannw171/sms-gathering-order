@@ -26,7 +26,7 @@ class ProductsTable
                 TextColumn::make('uom')
                     ->searchable(),
                 TextColumn::make('price')
-                    ->money()
+                    ->money('IDR', locale: 'id')
                     ->sortable(),
                 ImageColumn::make('image_url'),
                 TextColumn::make('stock')

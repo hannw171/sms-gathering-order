@@ -19,7 +19,7 @@ class OrdersTable
                 TextColumn::make('pharmacy.name')
                     ->searchable(),
                 TextColumn::make('total_amount')
-                    ->numeric()
+                    ->money('IDR', locale: 'id')
                     ->sortable(),
                 TextColumn::make('total_items')
                     ->numeric()

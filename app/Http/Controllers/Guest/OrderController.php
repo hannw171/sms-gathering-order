@@ -9,6 +9,9 @@ use App\Models\OrderItem;
 use App\Models\Pharmacy;
 use App\Models\Product;
 use App\Services\GatheringService;
+use App\Services\RewardCalculationService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -17,27 +20,34 @@ use Inertia\Response;
 class OrderController extends Controller
 {
     public function __construct(
-        protected GatheringService $gatheringService
+        protected GatheringService $gatheringService,
+        protected RewardCalculationService $rewardService
     ) {}
 
-    public function cart(Request $request): Response|\Illuminate\Http\RedirectResponse
+    public function cart(Request $request): Response|RedirectResponse
     {
         $pharmacyId = $request->session()->get('guest_pharmacy_id');
-        if (!$pharmacyId) {
+        if (! $pharmacyId) {
             return redirect()->route('guest.login');
         }
 
         $pharmacy = Pharmacy::find($pharmacyId);
-        if (!$pharmacy) {
+        if (! $pharmacy) {
             return redirect()->route('guest.login');
         }
 
         $milestone = $this->gatheringService->getPharmacyMilestone($pharmacy);
+        $currentRewards = $this->rewardService->calculateForPharmacy($pharmacy);
         $eventSetting = EventSetting::current();
 
         return Inertia::render('Guest/Cart', [
             'pharmacy' => $milestone['pharmacy'],
             'milestone' => $milestone,
+            'currentRewards' => $currentRewards,
+            'rewardOptions' => [
+                'interbat' => RewardCalculationService::INTERBAT_OPTIONS,
+                'graha_neo' => RewardCalculationService::GRAHA_NEO_OPTIONS,
+            ],
             'event' => [
                 'name' => $eventSetting->event_name,
                 'session_end_at' => $eventSetting->session_end_at,
@@ -49,14 +59,14 @@ class OrderController extends Controller
     public function checkout(Request $request)
     {
         $pharmacyId = $request->session()->get('guest_pharmacy_id');
-        if (!$pharmacyId) {
+        if (! $pharmacyId) {
             return redirect()->route('guest.login');
         }
 
         $pharmacy = Pharmacy::findOrFail($pharmacyId);
 
         $eventSetting = EventSetting::current();
-        if (!$eventSetting->is_ordering_active) {
+        if (! $eventSetting->is_ordering_active) {
             return back()->withErrors(['error' => 'Sesi pemesanan telah ditutup oleh panitia.']);
         }
 
@@ -65,6 +75,7 @@ class OrderController extends Controller
             'items.*.product_id' => ['required', 'exists:products,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
             'notes' => ['nullable', 'string', 'max:500'],
+            'reward_selections' => ['nullable', 'array'],
         ]);
 
         $order = DB::transaction(function () use ($request, $pharmacy) {
@@ -103,6 +114,7 @@ class OrderController extends Controller
                 'total_items' => $totalItems,
                 'status' => 'confirmed',
                 'notes' => $request->notes,
+                'reward_selections' => $request->reward_selections,
                 'ip_address' => $request->ip(),
             ]);
 
@@ -123,20 +135,33 @@ class OrderController extends Controller
         return redirect()->route('guest.order.success', ['order' => $order->id]);
     }
 
-    public function success(Request $request, Order $order): Response|\Illuminate\Http\RedirectResponse
+    public function success(Request $request, Order $order): Response|RedirectResponse
     {
         $pharmacyId = $request->session()->get('guest_pharmacy_id');
-        if (!$pharmacyId || $order->pharmacy_id != $pharmacyId) {
+        if (! $pharmacyId || $order->pharmacy_id != $pharmacyId) {
             return redirect()->route('guest.catalog');
         }
 
         $order->load(['items', 'pharmacy', 'unlockedRewardTier']);
         $milestone = $this->gatheringService->getPharmacyMilestone($order->pharmacy);
+        $cumulativeRewards = $this->rewardService->calculateForPharmacy($order->pharmacy);
 
         return Inertia::render('Guest/Success', [
             'order' => $order,
             'milestone' => $milestone,
+            'rewards' => $cumulativeRewards,
             'pharmacy' => $milestone['pharmacy'],
         ]);
+    }
+
+    public function previewRewards(Request $request): JsonResponse
+    {
+        $pharmacyId = $request->session()->get('guest_pharmacy_id');
+        $pharmacy = $pharmacyId ? Pharmacy::find($pharmacyId) : null;
+        $items = $request->input('items', []);
+
+        $result = $this->rewardService->evaluateCart($items, $pharmacy);
+
+        return response()->json($result);
     }
 }

@@ -3,7 +3,8 @@ import { Head, Link, router } from '@inertiajs/react';
 import GuestLayout from '../../Layouts/GuestLayout';
 import { formatRupiah } from '../../utils/format';
 import { useCart } from '../../hooks/useCart';
-import { Search, Plus, Minus, ShoppingBag, ArrowRight, Award, Sparkles } from 'lucide-react';
+import QuantityStepper from '../../Components/QuantityStepper';
+import { Search, ShoppingBag, ArrowRight, Sparkles } from 'lucide-react';
 
 export default function Catalog({ pharmacy, milestone, manufacturers, products, selectedManufacturer, searchQuery, event }) {
   const [search, setSearch] = useState(searchQuery || '');
@@ -174,29 +175,13 @@ export default function Catalog({ pharmacy, milestone, manufacturers, products, 
                     </span>
                   </div>
 
-                  {/* Quantity Stepper (Figma node 1:440) */}
-                  <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
-                    <button
-                      type="button"
-                      onClick={() => updateQuantity(product, Math.max(0, qty - 1))}
-                      disabled={qty === 0}
-                      className="w-7 h-7 rounded-lg bg-white flex items-center justify-center text-slate-700 hover:bg-slate-200 disabled:opacity-30 disabled:hover:bg-white shadow-xs transition-colors"
-                      aria-label="Kurang"
-                    >
-                      <Minus className="w-3.5 h-3.5" />
-                    </button>
-                    <span className="w-8 text-center text-xs font-bold text-slate-800">
-                      {qty}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => updateQuantity(product, qty + 1)}
-                      className="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center text-white hover:bg-brand-700 shadow-xs transition-colors"
-                      aria-label="Tambah"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  {/* Quantity Stepper with Manual Input (Figma node 1:440) */}
+                  <QuantityStepper
+                    value={qty}
+                    onChange={(newQty) => updateQuantity(product, newQty)}
+                    min={0}
+                    max={9999}
+                  />
                 </div>
               </div>
             );

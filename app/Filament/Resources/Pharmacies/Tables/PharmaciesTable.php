@@ -19,8 +19,6 @@ class PharmaciesTable
                     ->searchable(),
                 TextColumn::make('customer_code')
                     ->searchable(),
-                TextColumn::make('table_number')
-                    ->searchable(),
                 TextColumn::make('owner_name')
                     ->searchable(),
                 TextColumn::make('phone')

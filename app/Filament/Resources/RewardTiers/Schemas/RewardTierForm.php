@@ -19,7 +19,8 @@ class RewardTierForm
                     ->required(),
                 TextInput::make('min_spending')
                     ->required()
-                    ->numeric(),
+                    ->numeric()
+                    ->prefix('Rp'),
                 TextInput::make('reward_description')
                     ->required(),
                 TextInput::make('badge_icon')
