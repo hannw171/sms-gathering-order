@@ -6,21 +6,35 @@ use App\Http\Controllers\Controller;
 use App\Models\EventSetting;
 use App\Models\Pharmacy;
 use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class AuthController extends Controller
 {
-    public function showLogin(Request $request): Response
+    public function showLogin(Request $request): Response|RedirectResponse
     {
         // If already logged in, redirect to catalog
         if ($request->session()->has('guest_pharmacy_id')) {
             $pharmacy = Pharmacy::find($request->session()->get('guest_pharmacy_id'));
+            $tokenInSession = $request->session()->get('guest_device_token');
+
             if ($pharmacy) {
-                return Inertia::render('Guest/Catalog');
+                if (! $pharmacy->device_session_token || $pharmacy->device_session_token === $tokenInSession) {
+                    return redirect()->route('guest.catalog');
+                }
+
+                $request->session()->forget(['guest_pharmacy_id', 'guest_device_token']);
+
+                return redirect()->route('guest.login')->with([
+                    'sessionTerminated' => true,
+                    'terminatedMessage' => 'Sesi Anda telah berakhir karena akun apotek ini baru saja dibuka di perangkat atau browser lain.',
+                ]);
             }
-            $request->session()->forget('guest_pharmacy_id');
+
+            $request->session()->forget(['guest_pharmacy_id', 'guest_device_token']);
         }
 
         $eventSetting = EventSetting::current();
@@ -63,10 +77,10 @@ class AuthController extends Controller
             ]);
         }
 
-        $currentSessionToken = $request->session()->getId();
+        $currentToken = $request->session()->get('guest_device_token');
 
         // Check if device conflict exists
-        if ($pharmacy->device_session_token && $pharmacy->device_session_token !== $currentSessionToken && ! $request->boolean('force_takeover')) {
+        if ($pharmacy->device_session_token && $pharmacy->device_session_token !== $currentToken && ! $request->boolean('force_takeover')) {
             return back()->with([
                 'conflict' => true,
                 'conflictData' => [
@@ -92,9 +106,11 @@ class AuthController extends Controller
             $deviceName = 'Chrome • Windows';
         }
 
+        $deviceToken = (string) Str::random(40);
+
         // Establish session
         $pharmacy->update([
-            'device_session_token' => $currentSessionToken,
+            'device_session_token' => $deviceToken,
             'device_name' => $deviceName,
             'last_active_at' => now(),
             'is_checked_in' => true,
@@ -102,6 +118,7 @@ class AuthController extends Controller
         ]);
 
         $request->session()->put('guest_pharmacy_id', $pharmacy->id);
+        $request->session()->put('guest_device_token', $deviceToken);
 
         return redirect()->route('guest.catalog');
     }
@@ -114,7 +131,7 @@ class AuthController extends Controller
             ]);
         }
 
-        $request->session()->forget('guest_pharmacy_id');
+        $request->session()->forget(['guest_pharmacy_id', 'guest_device_token']);
 
         return redirect()->route('guest.login');
     }

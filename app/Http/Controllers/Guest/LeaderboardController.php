@@ -20,6 +20,12 @@ class LeaderboardController extends Controller
     {
         $pharmacyId = $request->session()->get('guest_pharmacy_id');
         $currentPharmacy = $pharmacyId ? Pharmacy::find($pharmacyId) : null;
+        $tokenInSession = $request->session()->get('guest_device_token');
+
+        if ($currentPharmacy && $currentPharmacy->device_session_token && $currentPharmacy->device_session_token !== $tokenInSession) {
+            $request->session()->forget(['guest_pharmacy_id', 'guest_device_token']);
+            $currentPharmacy = null;
+        }
 
         $leaderboard = $this->gatheringService->getLeaderboard();
         $eventSetting = EventSetting::current();

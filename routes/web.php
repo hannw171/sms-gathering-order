@@ -19,11 +19,13 @@ Route::get('/', [GuestAuthController::class, 'showLogin'])->name('guest.login');
 Route::post('/login-guest', [GuestAuthController::class, 'login'])->name('guest.login.post');
 Route::post('/logout-guest', [GuestAuthController::class, 'logout'])->name('guest.logout');
 
-Route::get('/katalog', [CatalogController::class, 'index'])->name('guest.catalog');
-Route::get('/keranjang', [OrderController::class, 'cart'])->name('guest.cart');
-Route::post('/keranjang/preview-rewards', [OrderController::class, 'previewRewards'])->name('guest.cart.preview');
-Route::post('/checkout', [OrderController::class, 'checkout'])->name('guest.checkout');
-Route::get('/order/sukses/{order}', [OrderController::class, 'success'])->name('guest.order.success');
+Route::middleware('guest.pharmacy')->group(function () {
+    Route::get('/katalog', [CatalogController::class, 'index'])->name('guest.catalog');
+    Route::get('/keranjang', [OrderController::class, 'cart'])->name('guest.cart');
+    Route::post('/keranjang/preview-rewards', [OrderController::class, 'previewRewards'])->name('guest.cart.preview');
+    Route::post('/checkout', [OrderController::class, 'checkout'])->name('guest.checkout');
+    Route::get('/order/sukses/{order}', [OrderController::class, 'success'])->name('guest.order.success');
+});
 
 Route::get('/leaderboard', [LeaderboardController::class, 'index'])->name('guest.leaderboard');
 

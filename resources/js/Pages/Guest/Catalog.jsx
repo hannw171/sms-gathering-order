@@ -271,14 +271,15 @@ export default function Catalog({
 
       {/* Floating Checkout Cart Bar (Figma node 1:420) */}
       {totalItems > 0 && (
-        <div className="fixed sm:absolute bottom-16 left-0 right-0 max-w-guest mx-auto px-4 z-40 animate-in slide-in-from-bottom duration-200">
+        <div className="fixed sm:absolute bottom-16 left-0 right-0 max-w-guest px-4 py-4 z-40 animate-in slide-in-from-bottom duration-200">
           <Link
             href="/keranjang"
             className="w-full bg-brand-900/95 backdrop-blur-md text-white p-3.5 px-4 rounded-2xl shadow-floating flex items-center justify-between hover:bg-brand-900 transition-all border border-brand-700/50"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-brand-700 flex items-center justify-center text-amber-300 font-bold text-sm shadow-inner">
-                {totalItems}
+              <div className="w-10 h-10 rounded-md bg-brand-700 flex flex-col items-center justify-center text-amber-300 font-bold text-sm shadow-sm gap-0">
+                <span className="text-[10px] text-brand-200 uppercase font-bold tracking-wider block">QTY</span>
+                <span>{totalItems}</span>
               </div>
               <div>
                 <span className="text-[10px] text-brand-200 uppercase font-bold tracking-wider block">

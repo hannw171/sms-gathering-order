@@ -42,6 +42,8 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'conflict' => $request->session()->get('conflict'),
                 'conflictData' => $request->session()->get('conflictData'),
+                'sessionTerminated' => $request->session()->get('sessionTerminated'),
+                'terminatedMessage' => $request->session()->get('terminatedMessage'),
                 'notFound' => $request->session()->get('notFound'),
                 'searchedQuery' => $request->session()->get('searchedQuery'),
                 'suggestions' => $request->session()->get('suggestions'),

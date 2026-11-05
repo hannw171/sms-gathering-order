@@ -225,19 +225,18 @@ class GatheringTest extends TestCase
         $this->assertEquals($this->pharmacy->id, session('guest_pharmacy_id'));
 
         // 2. Checkout order with products
-        $checkoutRes = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
-            ->post('/checkout', [
-                'items' => [
-                    [
-                        'product_id' => $this->product->id,
-                        'quantity' => 10,
-                    ],
+        $checkoutRes = $this->post('/checkout', [
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 10,
                 ],
-                'notes' => 'Pesanan E2E Acara',
-                'reward_selections' => [
-                    'interbat' => 'Panci Kuah',
-                ],
-            ]);
+            ],
+            'notes' => 'Pesanan E2E Acara',
+            'reward_selections' => [
+                'interbat' => 'Panci Kuah',
+            ],
+        ]);
 
         $order = Order::latest()->first();
         $this->assertNotNull($order);
@@ -265,5 +264,50 @@ class GatheringTest extends TestCase
         $this->pharmacy->refresh();
         $this->assertNotNull($this->pharmacy->reward_handed_over_at);
         $this->assertEquals('Apt. Pengelola', $this->pharmacy->reward_receiver_name);
+    }
+
+    public function test_logged_in_guest_visiting_root_redirects_to_catalog(): void
+    {
+        $response = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->get('/');
+
+        $response->assertRedirect('/katalog');
+    }
+
+    public function test_previous_device_is_terminated_after_another_device_takes_over(): void
+    {
+        // 1. Device A was logged in with token A, then Device B takes over and sets token B
+        $tokenDeviceA = 'token-device-a';
+        $tokenDeviceB = 'token-device-b';
+
+        $this->pharmacy->update([
+            'device_session_token' => $tokenDeviceB,
+        ]);
+
+        // 2. Device A (having token A in session) attempts to visit catalog
+        $response = $this->withSession([
+            'guest_pharmacy_id' => $this->pharmacy->id,
+            'guest_device_token' => $tokenDeviceA,
+        ])->get('/katalog');
+
+        $response->assertRedirect('/');
+        $response->assertSessionHas('sessionTerminated', true);
+        $this->assertNull(session('guest_pharmacy_id'));
+
+        // 3. Device A attempts to checkout
+        $checkoutResponse = $this->withSession([
+            'guest_pharmacy_id' => $this->pharmacy->id,
+            'guest_device_token' => $tokenDeviceA,
+        ])->post('/checkout', [
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 1,
+                ],
+            ],
+        ]);
+
+        $checkoutResponse->assertRedirect('/');
+        $this->assertEquals(0, Order::count());
     }
 }

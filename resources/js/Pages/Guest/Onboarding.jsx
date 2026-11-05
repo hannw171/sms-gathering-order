@@ -133,6 +133,23 @@ export default function Onboarding({ event, samplePharmacies }) {
             </div>
           </header>
 
+          {/* Session Terminated / Taken Over Notice */}
+          {flash?.sessionTerminated && (
+            <div className="bg-amber-50 border border-amber-200 rounded-[14px] p-3.5 mb-4 flex items-start gap-3 shadow-sm">
+              <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
+                <AlertCircle className="w-4 h-4" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-[13px] font-bold text-amber-900 mb-0.5">
+                  Sesi Dialihkan ke Perangkat Lain
+                </h4>
+                <p className="text-[12px] text-amber-800 leading-[18px]">
+                  {flash?.terminatedMessage || 'Sesi apotek Anda telah dibuka di perangkat lain. Silakan pilih kembali apotek Anda jika ingin menggunakan perangkat ini.'}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* ========================================================================= */}
           {/* CASE 1: FIGMA NODE 1:2 (Onboarding - Data Not Found State)                */}
           {/* ========================================================================= */}
