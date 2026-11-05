@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import { ShoppingBag, ShoppingCart, Trophy, LogOut } from 'lucide-react';
 import { useCart } from '../hooks/useCart';
@@ -6,19 +6,48 @@ import { useCart } from '../hooks/useCart';
 export default function GuestLayout({ children, pharmacy, milestone, title }) {
   const { url } = usePage();
   const { totalItems } = useCart();
+  const headerRef = useRef(null);
+  const [headerHeight, setHeaderHeight] = useState(69);
+
+  useEffect(() => {
+    if (!pharmacy || !headerRef.current) {
+      setHeaderHeight(0);
+      return;
+    }
+
+    const updateHeight = () => {
+      if (headerRef.current) {
+        setHeaderHeight(headerRef.current.offsetHeight);
+      }
+    };
+
+    updateHeight();
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(updateHeight);
+      observer.observe(headerRef.current);
+      return () => observer.disconnect();
+    }
+  }, [pharmacy, milestone]);
 
   const isCatalog = url.startsWith('/katalog');
   const isCart = url.startsWith('/keranjang');
   const isLeaderboard = url.startsWith('/leaderboard');
 
   return (
-    <div className="min-h-screen bg-slate-900 flex justify-center items-center py-0 sm:py-6 selection:bg-brand-500 selection:text-white">
+    <div className="min-h-screen bg-slate-900 flex justify-center items-start py-0 sm:py-6 selection:bg-brand-500 selection:text-white">
       {/* Mobile-first viewport container (matches Figma 390-448px) */}
-      <div className="w-full max-w-guest min-h-screen bg-canvas text-slate-900 flex flex-col relative shadow-2xl overflow-hidden border-x border-slate-200">
+      <div 
+        className="w-full max-w-guest min-h-screen bg-canvas text-slate-900 flex flex-col relative shadow-2xl overflow-x-clip border-x border-slate-200"
+        style={{ '--header-height': `${headerHeight}px` }}
+      >
         
         {/* Pharmacy Top Context Strip (Figma node 1:424) */}
         {pharmacy && (
-          <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 flex items-center justify-between shadow-sm">
+          <header 
+            ref={headerRef}
+            className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 flex items-center justify-between shadow-sm"
+          >
             <div className="flex flex-col min-w-0 pr-2">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-[15px] text-brand-900 truncate tracking-tight">
@@ -59,7 +88,7 @@ export default function GuestLayout({ children, pharmacy, milestone, title }) {
 
         {/* Bottom Navigation Bar */}
         {pharmacy && (
-          <nav className="fixed sm:absolute bottom-0 left-0 right-0 max-w-guest mx-auto z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 flex items-center justify-around py-2 px-4 shadow-lg">
+          <nav className="fixed bottom-0 left-0 right-0 max-w-guest mx-auto z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 flex items-center justify-around py-2 px-4 shadow-lg">
             <Link
               href="/katalog"
               className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg transition-colors ${

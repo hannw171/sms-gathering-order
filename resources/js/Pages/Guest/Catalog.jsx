@@ -4,7 +4,7 @@ import GuestLayout from '../../Layouts/GuestLayout';
 import { formatRupiah } from '../../utils/format';
 import { useCart } from '../../hooks/useCart';
 import QuantityStepper from '../../Components/QuantityStepper';
-import { Search, ShoppingBag, ArrowRight, Sparkles, Receipt, Trophy, Gift, Ticket } from 'lucide-react';
+import { Search, ShoppingBag, ArrowRight, Sparkles, Receipt, Trophy, Gift, Ticket, X } from 'lucide-react';
 
 export default function Catalog({
   pharmacy,
@@ -43,8 +43,8 @@ export default function Catalog({
     <GuestLayout pharmacy={pharmacy} milestone={milestone} title="Katalog Obat & Reward">
       <Head title="Katalog Belanja & Ringkasan Hadiah Gathering" />
 
-      {/* Ringkasan Belanja & Reward Nyata Gathering (Opsi A) */}
-      <div className="bg-gradient-to-br from-brand-900 via-brand-800 to-slate-900 text-white p-4 m-3.5 rounded-2xl shadow-lg relative overflow-hidden border border-brand-700/40">
+      {/* Ringkasan Belanja & Reward Nyata Gathering (Opsi A) - Tidak sticky, scroll secara natural */}
+      <div className="bg-gradient-to-br from-brand-900 via-brand-800 to-slate-900 text-white p-4 m-3.5 rounded-2xl shadow-lg relative z-0 overflow-hidden border border-brand-700/40">
         <div className="absolute top-0 right-0 -mr-6 -mt-6 w-32 h-32 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
 
         {/* Top Header inside Banner */}
@@ -145,48 +145,67 @@ export default function Catalog({
         </div>
       </div>
 
-      {/* Search Input Bar */}
-      <div className="px-3.5 mb-3">
-        <form onSubmit={handleSearchSubmit} className="relative">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Cari obat, nama pabrik, atau SKU..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white rounded-xl border border-slate-200 text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600 shadow-xs"
-          />
-        </form>
-      </div>
+      {/* Sticky Search & Filter Chips Bar */}
+      <div 
+        className="sticky z-20 bg-canvas/95 backdrop-blur-md pt-2 pb-2.5 mb-3 border-b border-slate-200/70 shadow-xs transition-shadow"
+        style={{ top: 'calc(var(--header-height, 69px) - 1px)' }}
+      >
+        {/* Search Input Bar */}
+        <div className="px-3.5 mb-2.5">
+          <form onSubmit={handleSearchSubmit} className="relative">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Cari obat, nama pabrik, atau SKU..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-9 py-2.5 bg-white rounded-xl border border-slate-200 text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600 shadow-xs"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch('');
+                  router.get('/katalog', { manufacturer: selectedManufacturer, search: '' }, { preserveState: true, preserveScroll: true });
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-100 transition-colors"
+                title="Hapus pencarian"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </form>
+        </div>
 
-      {/* Manufacturer Tabs Horizontal Pill Filter (Figma node 1:440) */}
-      <div className="px-3.5 mb-3.5">
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-          <button
-            type="button"
-            onClick={() => handleFilterManufacturer('semua')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all shadow-xs ${
-              selectedManufacturer === 'semua'
-                ? 'bg-brand-600 text-white shadow-sm'
-                : 'bg-white border border-slate-200/90 text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            Semua Pabrik
-          </button>
-          {manufacturers.map((m) => (
+        {/* Manufacturer Tabs Horizontal Pill Filter (Figma node 1:440) */}
+        <div className="px-3.5">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
             <button
-              key={m.id}
               type="button"
-              onClick={() => handleFilterManufacturer(m.slug)}
+              onClick={() => handleFilterManufacturer('semua')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all shadow-xs ${
-                selectedManufacturer === m.slug
+                selectedManufacturer === 'semua'
                   ? 'bg-brand-600 text-white shadow-sm'
                   : 'bg-white border border-slate-200/90 text-slate-600 hover:bg-slate-50'
               }`}
             >
-              {m.name}
+              Semua Pabrik
             </button>
-          ))}
+            {manufacturers.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => handleFilterManufacturer(m.slug)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all shadow-xs ${
+                  selectedManufacturer === m.slug
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'bg-white border border-slate-200/90 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {m.name}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
