@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 import { ShoppingBag, ShoppingCart, Trophy, LogOut } from 'lucide-react';
 import { useCart } from '../hooks/useCart';
 
@@ -64,7 +64,7 @@ export default function GuestLayout({ children, pharmacy, milestone, title }) {
               )}
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0">
               <Link
                 href="/keranjang"
                 className="relative p-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
@@ -77,6 +77,19 @@ export default function GuestLayout({ children, pharmacy, milestone, title }) {
                   </span>
                 )}
               </Link>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm('Keluar dari sesi apotek ini?')) {
+                    router.post('/logout-guest');
+                  }
+                }}
+                className="p-2.5 rounded-full bg-slate-100 hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors"
+                title="Keluar / Ganti Akun"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           </header>
         )}

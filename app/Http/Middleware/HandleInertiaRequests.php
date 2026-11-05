@@ -39,6 +39,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'guestPharmacyId' => $request->session()->get('guest_pharmacy_id'),
             'flash' => [
                 'conflict' => $request->session()->get('conflict'),
                 'conflictData' => $request->session()->get('conflictData'),

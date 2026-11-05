@@ -1,10 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import GuestLayout from '../../Layouts/GuestLayout';
 import { formatRupiah } from '../../utils/format';
+import { useCart } from '../../hooks/useCart';
 import { CheckCircle2, Trophy, ArrowRight, ShoppingBag, Sparkles, Gift, Ticket, Award } from 'lucide-react';
 
 export default function Success({ order, milestone, pharmacy, rewards }) {
+  const { clearCart } = useCart(pharmacy?.id);
+
+  useEffect(() => {
+    clearCart();
+  }, [clearCart]);
+
   const hasVouchers = (rewards?.vouchers || 0) > 0;
   const physicalRewards = rewards?.physical_rewards || [];
   const choiceSelections = order?.reward_selections || rewards?.choice_selections || [];
