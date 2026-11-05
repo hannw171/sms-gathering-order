@@ -77,8 +77,8 @@
         @if(!empty($rewards['physical_rewards']) || !empty($rewards['choice_selections']))
             <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(148, 163, 184, 0.3); display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
                 <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #f59e0b; margin-right: 4px;">Hadiah:</span>
-                @foreach(($rewards['physical_rewards'] ?? []) as $r)
-                    <x-filament::badge color="warning">🎁 {{ $r }}</x-filament::badge>
+                @foreach(($rewards['physical_rewards'] ?? []) as $giftName => $qty)
+                    <x-filament::badge color="warning">🎁 {{ is_numeric($giftName) ? $qty : $giftName . ': ' . $qty . ' pcs' }}</x-filament::badge>
                 @endforeach
                 @foreach(($rewards['choice_selections'] ?? []) as $cs)
                     <x-filament::badge color="info">✨ {{ $cs['selected_option'] ?? '' }} ({{ $cs['manufacturer_slug'] ?? '' }})</x-filament::badge>

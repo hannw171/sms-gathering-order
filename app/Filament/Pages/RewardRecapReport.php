@@ -103,8 +103,12 @@ class RewardRecapReport extends Page implements HasTable
                     ->label('Hadiah Langsung')
                     ->state(function (Pharmacy $record) use ($rewardService): string {
                         $res = $rewardService->calculateForPharmacy($record);
+                        $items = [];
+                        foreach ($res['physical_rewards'] ?? [] as $name => $qty) {
+                            $items[] = is_numeric($name) ? (string) $qty : "{$name}: {$qty} pcs";
+                        }
 
-                        return implode(', ', $res['physical_rewards'] ?? []) ?: '-';
+                        return implode(', ', $items) ?: '-';
                     })
                     ->badge()
                     ->color(fn (string $state): string => $state !== '-' ? 'warning' : 'gray')
@@ -259,7 +263,11 @@ class RewardRecapReport extends Page implements HasTable
                 $pharmacy = $item['pharmacy'];
                 $rewards = $item['rewards'];
 
-                $physicalStr = implode('; ', $rewards['physical_rewards'] ?? []);
+                $physicalList = [];
+                foreach (($rewards['physical_rewards'] ?? []) as $giftName => $qty) {
+                    $physicalList[] = is_numeric($giftName) ? (string) $qty : "{$giftName}: {$qty} pcs";
+                }
+                $physicalStr = implode('; ', $physicalList);
 
                 $choicesList = [];
                 foreach (($rewards['choice_selections'] ?? []) as $cs) {

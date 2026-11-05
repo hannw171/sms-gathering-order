@@ -2,13 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Pages\RewardRecapReport;
 use App\Models\EventSetting;
 use App\Models\Manufacturer;
 use App\Models\Order;
 use App\Models\Pharmacy;
 use App\Models\Product;
 use App\Models\RewardTier;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class GatheringTest extends TestCase
@@ -210,5 +213,57 @@ class GatheringTest extends TestCase
                 'stats' => ['total_gmv', 'total_orders'],
                 'event',
             ]);
+    }
+
+    public function test_end_to_end_gathering_order_and_reporting_lifecycle(): void
+    {
+        // 1. Guest Log in
+        $loginRes = $this->post('/login-guest', [
+            'customer_code' => $this->pharmacy->customer_code,
+        ]);
+        $loginRes->assertRedirect('/katalog');
+        $this->assertEquals($this->pharmacy->id, session('guest_pharmacy_id'));
+
+        // 2. Checkout order with products
+        $checkoutRes = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->post('/checkout', [
+                'items' => [
+                    [
+                        'product_id' => $this->product->id,
+                        'quantity' => 10,
+                    ],
+                ],
+                'notes' => 'Pesanan E2E Acara',
+                'reward_selections' => [
+                    'interbat' => 'Panci Kuah',
+                ],
+            ]);
+
+        $order = Order::latest()->first();
+        $this->assertNotNull($order);
+        $this->assertEquals(2000000, $order->total_amount);
+        $checkoutRes->assertRedirect('/order/sukses/'.$order->id);
+
+        // 3. Stage API updates
+        $apiRes = $this->getJson('/api/stage/data');
+        $apiRes->assertStatus(200);
+        $stageLeaderboard = collect($apiRes->json('leaderboard'));
+        $topPharmacy = $stageLeaderboard->first();
+        $this->assertEquals($this->pharmacy->name, $topPharmacy['name']);
+        $this->assertEquals(2000000, $topPharmacy['total_spending']);
+
+        // 4. Admin Handover flow
+        $admin = User::factory()->create();
+        $this->actingAs($admin);
+
+        Livewire::test(RewardRecapReport::class)
+            ->callTableAction('handover', $this->pharmacy, data: [
+                'receiver_name' => 'Apt. Pengelola',
+                'notes' => 'Diserahkan langsung',
+            ]);
+
+        $this->pharmacy->refresh();
+        $this->assertNotNull($this->pharmacy->reward_handed_over_at);
+        $this->assertEquals('Apt. Pengelola', $this->pharmacy->reward_receiver_name);
     }
 }
