@@ -26,8 +26,6 @@ class OrderForm
                     ->required()
                     ->numeric()
                     ->default(0),
-                Select::make('unlocked_reward_tier_id')
-                    ->relationship('unlockedRewardTier', 'name'),
                 TextInput::make('status')
                     ->required()
                     ->default('confirmed'),

@@ -72,6 +72,7 @@ class GatheringTest extends TestCase
         $this->pharmacy->update([
             'device_session_token' => 'another-active-session-id',
             'device_name' => 'Chrome Mobile • Samsung S23',
+            'last_active_at' => now()->subMinutes(5),
         ]);
 
         $response = $this->post('/login-guest', [
@@ -80,6 +81,8 @@ class GatheringTest extends TestCase
 
         $response->assertSessionHas('conflict', true);
         $response->assertSessionHas('conflictData');
+        $conflictData = session('conflictData');
+        $this->assertNotEmpty($conflictData['last_active_time']);
         $this->assertNull(session('guest_pharmacy_id'));
     }
 
@@ -114,6 +117,12 @@ class GatheringTest extends TestCase
             ->get('/katalog');
 
         $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Guest/Catalog')
+            ->has('currentRewards')
+            ->has('ordersCount')
+            ->has('milestone')
+        );
     }
 
     public function test_guest_can_checkout_order(): void

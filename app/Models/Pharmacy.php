@@ -30,6 +30,7 @@ class Pharmacy extends Model
     protected $casts = [
         'is_checked_in' => 'boolean',
         'checked_in_at' => 'datetime',
+        'last_active_at' => 'datetime',
         'reward_handed_over_at' => 'datetime',
     ];
 

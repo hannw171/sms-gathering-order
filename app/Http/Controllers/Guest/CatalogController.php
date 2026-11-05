@@ -8,6 +8,8 @@ use App\Models\Manufacturer;
 use App\Models\Pharmacy;
 use App\Models\Product;
 use App\Services\GatheringService;
+use App\Services\RewardCalculationService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -15,19 +17,21 @@ use Inertia\Response;
 class CatalogController extends Controller
 {
     public function __construct(
-        protected GatheringService $gatheringService
+        protected GatheringService $gatheringService,
+        protected RewardCalculationService $rewardService
     ) {}
 
-    public function index(Request $request): Response|\Illuminate\Http\RedirectResponse
+    public function index(Request $request): Response|RedirectResponse
     {
         $pharmacyId = $request->session()->get('guest_pharmacy_id');
-        if (!$pharmacyId) {
+        if (! $pharmacyId) {
             return redirect()->route('guest.login');
         }
 
         $pharmacy = Pharmacy::find($pharmacyId);
-        if (!$pharmacy) {
+        if (! $pharmacy) {
             $request->session()->forget('guest_pharmacy_id');
+
             return redirect()->route('guest.login');
         }
 
@@ -51,8 +55,8 @@ class CatalogController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%")
-                  ->orWhere('sku', 'like', "%{$search}%");
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('sku', 'like', "%{$search}%");
             });
         }
 
@@ -60,11 +64,15 @@ class CatalogController extends Controller
 
         // Milestone and Reward Tracker Data
         $milestone = $this->gatheringService->getPharmacyMilestone($pharmacy);
+        $currentRewards = $this->rewardService->calculateForPharmacy($pharmacy);
+        $ordersCount = $pharmacy->orders()->where('status', '!=', 'cancelled')->count();
         $eventSetting = EventSetting::current();
 
         return Inertia::render('Guest/Catalog', [
             'pharmacy' => $milestone['pharmacy'],
             'milestone' => $milestone,
+            'currentRewards' => $currentRewards,
+            'ordersCount' => $ordersCount,
             'manufacturers' => $manufacturers,
             'products' => $products,
             'selectedManufacturer' => $request->input('manufacturer', 'semua'),

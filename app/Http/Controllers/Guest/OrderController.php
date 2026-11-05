@@ -123,12 +123,6 @@ class OrderController extends Controller
                 OrderItem::create($itemData);
             }
 
-            // Update unlocked reward tier
-            $milestone = $this->gatheringService->getPharmacyMilestone($pharmacy);
-            if ($milestone['unlocked_tier']) {
-                $order->update(['unlocked_reward_tier_id' => $milestone['unlocked_tier']->id]);
-            }
-
             return $order;
         });
 

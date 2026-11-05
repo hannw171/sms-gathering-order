@@ -4,9 +4,19 @@ import GuestLayout from '../../Layouts/GuestLayout';
 import { formatRupiah } from '../../utils/format';
 import { useCart } from '../../hooks/useCart';
 import QuantityStepper from '../../Components/QuantityStepper';
-import { Search, ShoppingBag, ArrowRight, Sparkles } from 'lucide-react';
+import { Search, ShoppingBag, ArrowRight, Sparkles, Receipt, Trophy, Gift, Ticket } from 'lucide-react';
 
-export default function Catalog({ pharmacy, milestone, manufacturers, products, selectedManufacturer, searchQuery, event }) {
+export default function Catalog({
+  pharmacy,
+  milestone,
+  currentRewards,
+  ordersCount = 0,
+  manufacturers,
+  products,
+  selectedManufacturer,
+  searchQuery,
+  event,
+}) {
   const [search, setSearch] = useState(searchQuery || '');
   const { cart, totalItems, totalAmount, getItemQuantity, updateQuantity } = useCart();
 
@@ -19,69 +29,120 @@ export default function Catalog({ pharmacy, milestone, manufacturers, products, 
     router.get('/katalog', { manufacturer: selectedManufacturer, search }, { preserveState: true, preserveScroll: true });
   };
 
-  // Calculate dynamic projected tier if current cart items are checked out
-  const projectedTotal = (milestone?.total_spending || 0) + totalAmount;
-  const nextTier = milestone?.next_tier;
-  const currentTier = milestone?.unlocked_tier;
+  const hasVouchers = (currentRewards?.total_vouchers || 0) > 0;
+  const physicalRewardEntries = Object.entries(currentRewards?.physical_rewards || {});
+  const hasPhysicalRewards = physicalRewardEntries.length > 0;
+  const choiceSelections = currentRewards?.choice_selections || [];
+  const hasChoices = choiceSelections.length > 0;
+  const exeltisLanso = currentRewards?.details?.exeltis?.lanso_box || 0;
+  const exeltisSucra = currentRewards?.details?.exeltis?.sucra_fls || 0;
+  const hasExeltis = exeltisLanso > 0 || exeltisSucra > 0;
+  const hasAnyReward = hasVouchers || hasPhysicalRewards || hasChoices || hasExeltis;
 
   return (
     <GuestLayout pharmacy={pharmacy} milestone={milestone} title="Katalog Obat & Reward">
-      <Head title="Katalog Belanja & Dynamic Reward Tracker" />
+      <Head title="Katalog Belanja & Ringkasan Hadiah Gathering" />
 
-      {/* Dynamic Reward Tracker Banner (Figma node 1:420) */}
-      <div className="bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800 text-white p-4 m-3.5 rounded-2xl shadow-md relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mr-6 -mt-6 w-32 h-32 bg-amber-400/15 rounded-full blur-2xl pointer-events-none" />
+      {/* Ringkasan Belanja & Reward Nyata Gathering (Opsi A) */}
+      <div className="bg-gradient-to-br from-brand-900 via-brand-800 to-slate-900 text-white p-4 m-3.5 rounded-2xl shadow-lg relative overflow-hidden border border-brand-700/40">
+        <div className="absolute top-0 right-0 -mr-6 -mt-6 w-32 h-32 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="flex items-start justify-between gap-3 mb-2.5 relative z-10">
-          <div>
-            <div className="flex items-center gap-1.5 text-[11px] font-bold tracking-wider text-amber-300 uppercase">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>DYNAMIC REWARD TRACKER</span>
-            </div>
-            <div className="text-lg font-bold text-white mt-0.5">
-              {formatRupiah(milestone?.total_spending || 0)}
-              {totalAmount > 0 && (
-                <span className="text-xs font-normal text-emerald-300 ml-1.5 font-mono">
-                  (+{formatRupiah(totalAmount)} di keranjang)
-                </span>
-              )}
-            </div>
+        {/* Top Header inside Banner */}
+        <div className="flex items-center justify-between gap-2 mb-3 relative z-10">
+          <div className="flex items-center gap-1.5 text-[11px] font-bold tracking-wider text-amber-300 uppercase">
+            <Receipt className="w-3.5 h-3.5 text-amber-400" />
+            <span>RINGKASAN BELANJA GATHERING</span>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl px-2.5 py-1 text-right">
-            <span className="block text-[10px] text-brand-100 font-medium">Reward Saat Ini</span>
-            <span className="text-xs font-bold text-amber-300 flex items-center gap-1 justify-end">
-              <span>{currentTier ? currentTier.badge_icon : '⏳'}</span>
-              <span>{currentTier ? currentTier.reward_description : 'Belum Ada'}</span>
+          <Link
+            href="/leaderboard"
+            className="inline-flex items-center gap-1 bg-amber-400/15 hover:bg-amber-400/25 text-amber-300 border border-amber-300/30 text-[11px] font-bold px-2.5 py-1 rounded-full transition-colors"
+          >
+            <Trophy className="w-3 h-3 text-amber-400" />
+            <span>Rank #{milestone?.current_rank || '-'}</span>
+            <span className="text-amber-200/80 text-[10px]">→</span>
+          </Link>
+        </div>
+
+        {/* 2-Column Metrics */}
+        <div className="grid grid-cols-2 gap-2.5 relative z-10 mb-3">
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 border border-white/10">
+            <span className="text-[10px] text-brand-200 block uppercase font-medium">
+              Total Belanja
+            </span>
+            <div className="text-base font-bold text-white mt-0.5 truncate">
+              {formatRupiah(milestone?.total_spending || 0)}
+            </div>
+            {totalAmount > 0 && (
+              <span className="text-[10px] text-emerald-300 font-medium block truncate">
+                +{formatRupiah(totalAmount)} di keranjang
+              </span>
+            )}
+          </div>
+
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 border border-white/10">
+            <span className="text-[10px] text-amber-200 block uppercase font-medium">
+              Total Voucher
+            </span>
+            <div className="text-base font-bold text-amber-300 mt-0.5 truncate">
+              {hasVouchers ? formatRupiah(currentRewards.total_vouchers) : 'Rp 0'}
+            </div>
+            <span className="text-[10px] text-slate-300 block">
+              {ordersCount > 0 ? `${ordersCount} PO Terkirim` : 'Belum ada PO'}
             </span>
           </div>
         </div>
 
-        {/* Progress Bar towards Next Tier */}
-        {nextTier ? (
-          <div className="relative z-10 mt-1">
-            <div className="flex justify-between items-center text-[11px] text-brand-100 mb-1">
-              <span>Target: <strong className="text-white">{nextTier.reward_description}</strong></span>
-              <span>{milestone.progress_percentage}%</span>
+        {/* Reward Status & Highlights */}
+        <div className="relative z-10 pt-2 border-t border-white/15">
+          {hasAnyReward ? (
+            <div className="space-y-1.5">
+              <span className="text-[10px] text-amber-200 font-semibold uppercase tracking-wider block flex items-center gap-1">
+                <Gift className="w-3 h-3 text-amber-400" />
+                <span>Hadiah &amp; Bonus Diraih:</span>
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {hasVouchers && (
+                  <span className="bg-amber-400/20 px-2 py-0.5 rounded-lg text-[10px] font-semibold text-amber-200 border border-amber-300/30 flex items-center gap-1">
+                    <Ticket className="w-3 h-3 text-amber-300" />
+                    <span>Voucher: {formatRupiah(currentRewards.total_vouchers)}</span>
+                  </span>
+                )}
+                {physicalRewardEntries.map(([gift, qty]) => (
+                  <span
+                    key={gift}
+                    className="bg-white/15 backdrop-blur-md px-2 py-0.5 rounded-lg text-[10px] font-semibold text-white border border-white/20 flex items-center gap-1"
+                  >
+                    <span>🎁</span>
+                    <span>{gift}: {qty} pcs</span>
+                  </span>
+                ))}
+                {choiceSelections.map((cs, idx) => (
+                  <span
+                    key={idx}
+                    className="bg-amber-400/20 px-2 py-0.5 rounded-lg text-[10px] font-semibold text-amber-200 border border-amber-300/30 flex items-center gap-1"
+                  >
+                    <span>⭐</span>
+                    <span>{cs.selected_option}</span>
+                  </span>
+                ))}
+                {hasExeltis && (
+                  <span className="bg-emerald-400/20 px-2 py-0.5 rounded-lg text-[10px] font-semibold text-emerald-200 border border-emerald-300/30 flex items-center gap-1">
+                    <span>✨</span>
+                    <span>Exeltis ({exeltisLanso} Box / {exeltisSucra} Botol): Bebas Pilih Hadiah</span>
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="w-full bg-black/20 h-2.5 rounded-full overflow-hidden p-0.5 border border-white/10">
-              <div
-                className="bg-gradient-to-r from-emerald-400 to-amber-300 h-full rounded-full transition-all duration-500 shadow-sm"
-                style={{ width: `${Math.min(100, milestone.progress_percentage)}%` }}
-              />
-            </div>
-            <p className="text-[11px] text-brand-100/90 mt-1.5 flex items-center gap-1">
-              <span>🚀</span>
+          ) : (
+            <p className="text-[11px] text-brand-100/90 flex items-center gap-1.5 leading-snug">
+              <span>💡</span>
               <span>
-                Belanja <strong>{formatRupiah(milestone.amount_to_next_tier)}</strong> lagi untuk buka <strong>{nextTier.name}</strong>!
+                Pilih produk dari 9 pabrikan di bawah untuk mengumpulkan hadiah fisik &amp; voucher belanja malam ini.
               </span>
             </p>
-          </div>
-        ) : (
-          <div className="bg-emerald-500/20 border border-emerald-400/30 rounded-xl p-2 text-center text-xs text-emerald-100 font-semibold">
-            🎉 Selamat! Anda telah mencapai Tier Reward Tertinggi Malam Ini!
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Search Input Bar */}

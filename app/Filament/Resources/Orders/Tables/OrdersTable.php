@@ -24,8 +24,6 @@ class OrdersTable
                 TextColumn::make('total_items')
                     ->numeric()
                     ->sortable(),
-                TextColumn::make('unlockedRewardTier.name')
-                    ->searchable(),
                 TextColumn::make('status')
                     ->searchable(),
                 TextColumn::make('ip_address')

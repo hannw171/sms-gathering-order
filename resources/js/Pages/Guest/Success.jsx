@@ -5,7 +5,6 @@ import { formatRupiah } from '../../utils/format';
 import { CheckCircle2, Trophy, ArrowRight, ShoppingBag, Sparkles, Gift, Ticket, Award } from 'lucide-react';
 
 export default function Success({ order, milestone, pharmacy, rewards }) {
-  const unlockedTier = order?.unlocked_reward_tier || milestone?.unlocked_tier;
   const hasVouchers = (rewards?.vouchers || 0) > 0;
   const physicalRewards = rewards?.physical_rewards || [];
   const choiceSelections = order?.reward_selections || rewards?.choice_selections || [];
@@ -61,16 +60,6 @@ export default function Success({ order, milestone, pharmacy, rewards }) {
               </span>
             </div>
           </div>
-
-          {unlockedTier && (
-            <div className="mt-3 pt-3 border-t border-white/15 flex items-center gap-2">
-              <span className="text-xl">{unlockedTier.badge_icon || '🏆'}</span>
-              <div>
-                <span className="text-[10px] text-amber-200 block uppercase font-bold">Reward Berhasil Dibuka:</span>
-                <span className="text-xs font-bold text-white">{unlockedTier.reward_description}</span>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Hadiah & Voucher Gathering Card */}

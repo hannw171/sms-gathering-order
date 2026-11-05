@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Guest;
 use App\Http\Controllers\Controller;
 use App\Models\EventSetting;
 use App\Models\Pharmacy;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -72,9 +73,8 @@ class AuthController extends Controller
                     'pharmacy_id' => $pharmacy->id,
                     'pharmacy_name' => $pharmacy->name,
                     'customer_code' => $pharmacy->customer_code,
-                    'table_number' => $pharmacy->table_number,
                     'previous_device' => $pharmacy->device_name ?: 'Chrome Mobile • Samsung S23',
-                    'last_active_time' => $pharmacy->last_active_at ? $pharmacy->last_active_at->diffForHumans() : '2 menit lalu',
+                    'last_active_time' => $pharmacy->last_active_at ? Carbon::parse($pharmacy->last_active_at)->diffForHumans() : '2 menit lalu',
                 ],
             ]);
         }
