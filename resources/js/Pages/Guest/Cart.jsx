@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import axios from 'axios';
 import GuestLayout from '../../Layouts/GuestLayout';
 import { formatRupiah } from '../../utils/format';
 import { useCart } from '../../hooks/useCart';
 import QuantityStepper from '../../Components/QuantityStepper';
+import RewardSelectionModal from '../../Components/RewardSelectionModal';
 import {
   Trash2,
   ArrowLeft,
+  ArrowRight,
   Send,
   Sparkles,
   Gift,
@@ -28,12 +30,15 @@ export default function Cart({
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
 
-  // Choice selections
-  const interbatChoices = rewardOptions?.interbat || ['Elektrik Kettle', 'Panci Kuah', 'Panci Mini Listrik'];
-  const grahaNeoChoices = rewardOptions?.graha_neo || ['Magic Com Cosmos', 'Mixer Miyako'];
-  const [selectedInterbat, setSelectedInterbat] = useState(interbatChoices[0]);
-  const [selectedGrahaNeo, setSelectedGrahaNeo] = useState(grahaNeoChoices[0]);
+  // Dynamic choice selections map: { [progKey]: selectedOption }
+  const [selectedChoices, setSelectedChoices] = useState({
+    graha_neo: rewardOptions?.graha_neo?.[0] || 'Magic Com Cosmos',
+    interbat: rewardOptions?.interbat?.[0] || 'Elektrik Kettle',
+    exeltis_lanso: '',
+    exeltis_sucra: '',
+  });
 
   // Real-time server reward preview
   const [preview, setPreview] = useState(null);
@@ -71,8 +76,83 @@ export default function Cart({
   }, [cartItems]);
 
   const unlockedNow = preview?.unlocked_now || {};
-  const hasInterbatChoice = (unlockedNow.interbat_choice_count || 0) > 0;
-  const hasGrahaNeoChoice = (unlockedNow.graha_neo_choice_count || 0) > 0;
+
+  // Build list of active unlocked choice programs
+  const unlockedPrograms = useMemo(() => {
+    const list = [];
+
+    if ((unlockedNow.graha_neo_choice_count || 0) > 0) {
+      list.push({
+        key: 'graha_neo',
+        manufacturer: 'PT. GRAHA FARMA',
+        title: 'Neo Protifed Graha Farma',
+        badge: 'Kelipatan 25 Box',
+        description:
+          'Pesanan Neo Protifed Anda mencapai kelipatan 25 Box. Dapatkan Voucher Rp 50.000 + Hadiah Pilihan:',
+        options: unlockedNow.graha_neo_options || rewardOptions?.graha_neo || ['Magic Com Cosmos', 'Mixer Miyako'],
+      });
+    }
+
+    if ((unlockedNow.interbat_choice_count || 0) > 0) {
+      list.push({
+        key: 'interbat',
+        manufacturer: 'INTERBAT',
+        title: 'Interbat Generic',
+        badge: 'Paket Rp 2.500.000',
+        description:
+          'Pesanan Anda memenuhi syarat Paket Interbat Generic. Silakan tentukan hadiah pilihan Anda:',
+        options:
+          unlockedNow.interbat_options || rewardOptions?.interbat || ['Elektrik Kettle', 'Panci Kuah', 'Panci Mini Listrik'],
+      });
+    }
+
+    if (
+      (unlockedNow.exeltis_lanso_choice_count || 0) > 0 &&
+      (unlockedNow.exeltis_lanso_options?.length || 0) > 0
+    ) {
+      list.push({
+        key: 'exeltis_lanso',
+        manufacturer: 'EXELTIS',
+        title: 'Lansoprazole (Exeltis)',
+        badge: `${unlockedNow.exeltis_lanso_qty} Box`,
+        description: `Pesanan Lansoprazole mencapai ${unlockedNow.exeltis_lanso_qty} Box. Bebas pilih hadiah dari tier yang Anda capai:`,
+        options: unlockedNow.exeltis_lanso_options,
+      });
+    }
+
+    if (
+      (unlockedNow.exeltis_sucra_choice_count || 0) > 0 &&
+      (unlockedNow.exeltis_sucra_options?.length || 0) > 0
+    ) {
+      list.push({
+        key: 'exeltis_sucra',
+        manufacturer: 'EXELTIS',
+        title: 'Sucralfate (Exeltis)',
+        badge: `${unlockedNow.exeltis_sucra_qty} Botol`,
+        description: `Pesanan Sucralfate mencapai ${unlockedNow.exeltis_sucra_qty} Botol. Bebas pilih hadiah dari tier yang Anda capai:`,
+        options: unlockedNow.exeltis_sucra_options,
+      });
+    }
+
+    return list;
+  }, [unlockedNow, rewardOptions]);
+
+  // Synchronize smart default selections whenever unlocked programs change
+  useEffect(() => {
+    if (unlockedPrograms.length > 0) {
+      setSelectedChoices((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        unlockedPrograms.forEach((prog) => {
+          if (!next[prog.key] || !prog.options.includes(next[prog.key])) {
+            next[prog.key] = prog.options[0];
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    }
+  }, [unlockedPrograms]);
 
   // Projected spending after this order
   const currentSpending = milestone?.total_spending || 0;
@@ -81,12 +161,11 @@ export default function Cart({
   const handleConfirmOrder = () => {
     setIsSubmitting(true);
     const rewardSelections = {};
-    if (hasInterbatChoice) {
-      rewardSelections.interbat = selectedInterbat;
-    }
-    if (hasGrahaNeoChoice) {
-      rewardSelections.graha_neo = selectedGrahaNeo;
-    }
+    unlockedPrograms.forEach((prog) => {
+      if (selectedChoices[prog.key]) {
+        rewardSelections[prog.key] = selectedChoices[prog.key];
+      }
+    });
 
     router.post(
       '/checkout',
@@ -210,87 +289,115 @@ export default function Cart({
               )}
             </div>
 
-            {/* UNLOCKED CHOICE REWARDS SECTION: Interbat */}
-            {hasInterbatChoice && (
-              <div className="bg-amber-50/90 border-2 border-amber-300 rounded-2xl p-4 shadow-sm animate-in fade-in slide-in-from-top-2">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <Gift className="w-5 h-5 text-amber-600 shrink-0" />
-                  <h4 className="font-bold text-xs text-amber-900 uppercase tracking-wide">
-                    🎉 Pilih Bonus Hadiah Interbat ({unlockedNow.interbat_choice_count} Hadiah)
-                  </h4>
+            {/* ========================================================================= */}
+            {/* ADAPTIVE REWARD CHOICE SECTION                                            */}
+            {/* Case 1: Exactly 1 reward program -> Inline on Cart Page                   */}
+            {/* Case 2: Multiple reward programs (> 1) -> Summary card + Selection Modal   */}
+            {/* ========================================================================= */}
+
+            {unlockedPrograms.length === 1 && (
+              <div className="bg-blue-50/90 border-2 border-blue-300 rounded-2xl p-4 shadow-sm animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <Gift className="w-5 h-5 text-blue-600 shrink-0" />
+                    <h4 className="font-bold text-xs text-blue-900 uppercase tracking-wide">
+                      🎉 PILIH HADIAH {unlockedPrograms[0].title.toUpperCase()} (1 HADIAH)
+                    </h4>
+                  </div>
+                  <span className="text-[10px] bg-blue-200/80 text-blue-800 font-bold px-2 py-0.5 rounded-full shrink-0">
+                    {unlockedPrograms[0].badge}
+                  </span>
                 </div>
-                <p className="text-[11px] text-amber-800 mb-3 leading-relaxed">
-                  Pesanan Anda memenuhi syarat Paket Interbat Generic (Kelipatan Rp 2.500.000). Silakan tentukan hadiah pilihan Anda:
+                <p className="text-[11px] text-blue-800 mb-3 leading-relaxed">
+                  {unlockedPrograms[0].description}
                 </p>
-                <div className="grid grid-cols-1 gap-2">
-                  {interbatChoices.map((opt) => (
+                <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto pr-1">
+                  {unlockedPrograms[0].options.map((opt, idx) => (
                     <label
                       key={opt}
                       className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
-                        selectedInterbat === opt
-                          ? 'bg-amber-100/90 border-amber-500 font-bold text-amber-950 shadow-xs'
-                          : 'bg-white border-amber-200 text-slate-700 hover:bg-amber-50/50'
+                        selectedChoices[unlockedPrograms[0].key] === opt
+                          ? 'bg-blue-100/90 border-blue-500 font-bold text-blue-950 shadow-xs'
+                          : 'bg-white border-blue-200 text-slate-700 hover:bg-blue-50/50'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0 pr-2">
                         <input
                           type="radio"
-                          name="interbat_choice"
+                          name={`inline_choice_${unlockedPrograms[0].key}`}
                           value={opt}
-                          checked={selectedInterbat === opt}
-                          onChange={() => setSelectedInterbat(opt)}
-                          className="w-4 h-4 text-amber-600 focus:ring-amber-500"
+                          checked={selectedChoices[unlockedPrograms[0].key] === opt}
+                          onChange={() =>
+                            setSelectedChoices((prev) => ({
+                              ...prev,
+                              [unlockedPrograms[0].key]: opt,
+                            }))
+                          }
+                          className="w-4 h-4 text-blue-600 focus:ring-blue-500"
                         />
-                        <span className="text-xs">{opt}</span>
+                        <span className="text-xs truncate">{opt}</span>
                       </div>
-                      <span className="text-[10px] text-amber-700 font-semibold bg-white/80 px-2 py-0.5 rounded-full border border-amber-200">
-                        Pilihan
-                      </span>
+                      {idx === 0 && unlockedPrograms[0].options.length > 1 ? (
+                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
+                          Tier Tertinggi
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-blue-700 font-semibold bg-white/80 px-2 py-0.5 rounded-full border border-blue-200 shrink-0">
+                          Pilihan
+                        </span>
+                      )}
                     </label>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* UNLOCKED CHOICE REWARDS SECTION: Graha Neo Protifed */}
-            {hasGrahaNeoChoice && (
-              <div className="bg-blue-50/90 border-2 border-blue-300 rounded-2xl p-4 shadow-sm animate-in fade-in slide-in-from-top-2">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <Gift className="w-5 h-5 text-blue-600 shrink-0" />
-                  <h4 className="font-bold text-xs text-blue-900 uppercase tracking-wide">
-                    🎉 Pilih Hadiah Neo Protifed Graha ({unlockedNow.graha_neo_choice_count} Hadiah)
-                  </h4>
-                </div>
-                <p className="text-[11px] text-blue-800 mb-3 leading-relaxed">
-                  Pesanan Neo Protifed Anda mencapai kelipatan 25 Box. Dapatkan Voucher Rp 50.000 + Hadiah Pilihan:
-                </p>
-                <div className="grid grid-cols-1 gap-2">
-                  {grahaNeoChoices.map((opt) => (
-                    <label
-                      key={opt}
-                      className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
-                        selectedGrahaNeo === opt
-                          ? 'bg-blue-100/90 border-blue-500 font-bold text-blue-950 shadow-xs'
-                          : 'bg-white border-blue-200 text-slate-700 hover:bg-blue-50/50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <input
-                          type="radio"
-                          name="graha_neo_choice"
-                          value={opt}
-                          checked={selectedGrahaNeo === opt}
-                          onChange={() => setSelectedGrahaNeo(opt)}
-                          className="w-4 h-4 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-xs">{opt}</span>
+            {unlockedPrograms.length > 1 && (
+              <div className="bg-gradient-to-br from-indigo-50 via-blue-50 to-white border-2 border-indigo-200 rounded-2xl p-4 shadow-sm animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                      <Gift className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-[13px] font-bold text-indigo-950 uppercase tracking-wide">
+                          🎉 Anda Berhak Memilih {unlockedPrograms.length} Hadiah!
+                        </h4>
                       </div>
-                      <span className="text-[10px] text-blue-700 font-semibold bg-white/80 px-2 py-0.5 rounded-full border border-blue-200">
-                        Pilihan
+                      <p className="text-[11px] text-indigo-800/90 mt-0.5">
+                        Terbuka dari: {unlockedPrograms.map((p) => p.title).join(', ')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Current Selection List */}
+                <div className="mt-3 pt-3 border-t border-indigo-100/90 space-y-1.5">
+                  {unlockedPrograms.map((prog) => (
+                    <div
+                      key={prog.key}
+                      className="flex items-center justify-between bg-white/90 rounded-xl px-3 py-2 text-[12px] border border-indigo-100 shadow-2xs"
+                    >
+                      <span className="font-semibold text-slate-700 text-[11px] truncate mr-2">
+                        {prog.title}:
                       </span>
-                    </label>
+                      <span className="font-bold text-indigo-700 truncate text-[11px] text-right">
+                        {selectedChoices[prog.key] || 'Belum dipilih'}
+                      </span>
+                    </div>
                   ))}
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsRewardModalOpen(true)}
+                  className="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[13px] py-2.5 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>Buka &amp; Tentukan Pilihan Hadiah ({unlockedPrograms.length} Hadiah)</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
             )}
 
@@ -402,23 +509,22 @@ export default function Cart({
             </p>
 
             {/* Choice Summary in Confirmation */}
-            {(hasInterbatChoice || hasGrahaNeoChoice) && (
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-3 text-left space-y-1">
-                <span className="text-[10px] font-bold text-slate-500 uppercase block">
+            {unlockedPrograms.length > 0 && (
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-3 text-left space-y-1.5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase block tracking-wider">
                   Hadiah Pilihan Anda:
                 </span>
-                {hasInterbatChoice && (
-                  <p className="text-xs font-semibold text-amber-900 flex items-center gap-1.5">
-                    <span>🎁 Interbat:</span>
-                    <span className="text-brand-700">{selectedInterbat}</span>
-                  </p>
-                )}
-                {hasGrahaNeoChoice && (
-                  <p className="text-xs font-semibold text-blue-900 flex items-center gap-1.5">
-                    <span>🎁 Neo Protifed:</span>
-                    <span className="text-brand-700">{selectedGrahaNeo}</span>
-                  </p>
-                )}
+                {unlockedPrograms.map((prog) => (
+                  <div
+                    key={prog.key}
+                    className="text-xs font-semibold text-slate-800 flex items-center justify-between gap-1.5"
+                  >
+                    <span className="text-slate-600 truncate mr-2">🎁 {prog.title}:</span>
+                    <span className="text-brand-700 font-bold truncate max-w-[170px] text-right">
+                      {selectedChoices[prog.key]}
+                    </span>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -442,6 +548,20 @@ export default function Cart({
           </div>
         </div>
       )}
+
+      {/* Reward Selection Modal / Drawer for Multi-Program Choices */}
+      <RewardSelectionModal
+        isOpen={isRewardModalOpen}
+        onClose={() => setIsRewardModalOpen(false)}
+        unlockedPrograms={unlockedPrograms}
+        selectedChoices={selectedChoices}
+        onSelectChoice={(key, value) => {
+          setSelectedChoices((prev) => ({
+            ...prev,
+            [key]: value,
+          }));
+        }}
+      />
     </GuestLayout>
   );
 }

@@ -47,6 +47,8 @@ class OrderController extends Controller
             'rewardOptions' => [
                 'interbat' => RewardCalculationService::INTERBAT_OPTIONS,
                 'graha_neo' => RewardCalculationService::GRAHA_NEO_OPTIONS,
+                'exeltis_lanso' => RewardCalculationService::EXELTIS_LANSO_TIERS,
+                'exeltis_sucra' => RewardCalculationService::EXELTIS_SUCRA_TIERS,
             ],
             'event' => [
                 'name' => $eventSetting->event_name,

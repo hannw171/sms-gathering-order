@@ -156,4 +156,25 @@ class RewardCalculationServiceTest extends TestCase
         $this->assertEquals(50, $res['details']['exeltis']['sucra_fls']);
         $this->assertEquals('ANDA BEBAS MEMILIH HADIAH YANG ADA DI PROGRAM', $res['details']['exeltis']['program_note']);
     }
+
+    public function test_exeltis_tiered_choice_options_and_custom_selection(): void
+    {
+        $optionsLanso = RewardCalculationService::getExeltisLansoOptions(50);
+        $this->assertCount(8, $optionsLanso); // tiers: 5, 10, 15, 20, 25, 30, 40, 50
+        $this->assertStringContainsString('Speaker Aktif', $optionsLanso[0]); // highest first
+        $this->assertStringContainsString('Handuk 30 x 70cm', end($optionsLanso));
+
+        // Test custom selection: user unlocked 50 Box, but deliberately chose Tier 25 (Wajan Hitam)
+        $res = $this->service->evaluateFromAggregates(
+            ['exeltis' => 1000000],
+            ['EXE-001' => 50],
+            [
+                ['exeltis_lanso' => 'Wajan Hitam 24cm (Tier 25 Box)'],
+            ]
+        );
+
+        $this->assertCount(1, $res['choice_selections']);
+        $this->assertEquals('Wajan Hitam 24cm (Tier 25 Box)', $res['choice_selections'][0]['selected_option']);
+        $this->assertEquals('exeltis', $res['choice_selections'][0]['manufacturer_slug']);
+    }
 }

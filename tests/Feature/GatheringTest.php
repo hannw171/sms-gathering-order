@@ -198,6 +198,32 @@ class GatheringTest extends TestCase
         $successResponse->assertStatus(200);
     }
 
+    public function test_guest_can_checkout_with_multiple_manufacturer_reward_choices(): void
+    {
+        $response = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->post('/checkout', [
+                'items' => [
+                    [
+                        'product_id' => $this->product->id,
+                        'quantity' => 2,
+                    ],
+                ],
+                'notes' => 'Pesanan dengan multiple hadiah pilihan',
+                'reward_selections' => [
+                    'graha_neo' => 'Magic Com Cosmos',
+                    'exeltis_lanso' => 'Wajan Hitam 24cm (Tier 25 Box)',
+                ],
+            ]);
+
+        $order = Order::latest()->first();
+        $this->assertNotNull($order);
+        $this->assertIsArray($order->reward_selections);
+        $this->assertEquals('Magic Com Cosmos', $order->reward_selections['graha_neo']);
+        $this->assertEquals('Wajan Hitam 24cm (Tier 25 Box)', $order->reward_selections['exeltis_lanso']);
+
+        $response->assertRedirect('/order/sukses/'.$order->id);
+    }
+
     public function test_stage_leaderboard_page_and_api(): void
     {
         $response = $this->get('/stage');

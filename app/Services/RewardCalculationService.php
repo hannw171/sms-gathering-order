@@ -28,6 +28,93 @@ class RewardCalculationService
     ];
 
     /**
+     * Tiers for Exeltis Lansoprazole (EXE-001)
+     */
+    public const EXELTIS_LANSO_TIERS = [
+        ['min_qty' => 5, 'reward' => 'Handuk 30 x 70cm'],
+        ['min_qty' => 10, 'reward' => 'Payung Lipat'],
+        ['min_qty' => 15, 'reward' => 'Tumbler'],
+        ['min_qty' => 20, 'reward' => 'Voucher Rp 50.000,-'],
+        ['min_qty' => 25, 'reward' => 'Wajan Hitam 24cm'],
+        ['min_qty' => 30, 'reward' => 'Panci 18cm'],
+        ['min_qty' => 40, 'reward' => 'Cooper Blender 2L'],
+        ['min_qty' => 50, 'reward' => 'Speaker Aktif'],
+        ['min_qty' => 100, 'reward' => 'Setrikaan'],
+        ['min_qty' => 200, 'reward' => 'Panci Set 3in 1'],
+    ];
+
+    /**
+     * Tiers for Exeltis Sucralfate (EXE-002, EXE-003)
+     */
+    public const EXELTIS_SUCRA_TIERS = [
+        ['min_qty' => 5, 'reward' => 'Tas Lipat'],
+        ['min_qty' => 10, 'reward' => 'Tumbler Gelas'],
+        ['min_qty' => 15, 'reward' => 'Payung Panjang'],
+        ['min_qty' => 20, 'reward' => 'Voucher Rp 50.000,-'],
+        ['min_qty' => 25, 'reward' => 'TWS'],
+        ['min_qty' => 30, 'reward' => 'Power Bank'],
+        ['min_qty' => 40, 'reward' => 'Speaker Aktif'],
+        ['min_qty' => 100, 'reward' => 'Tekko'],
+        ['min_qty' => 200, 'reward' => 'Panci Set'],
+    ];
+
+    /**
+     * Get eligible reward options for Exeltis Lansoprazole based on ordered quantity.
+     * Highest unlocked tier is placed first.
+     *
+     * @return array<int, string>
+     */
+    public static function getExeltisLansoOptions(int $qty): array
+    {
+        $options = [];
+        foreach (self::EXELTIS_LANSO_TIERS as $tier) {
+            if ($qty >= $tier['min_qty']) {
+                $options[] = "{$tier['reward']} (Tier {$tier['min_qty']} Box)";
+            }
+        }
+
+        return array_reverse($options);
+    }
+
+    /**
+     * Get highest unlocked reward for Exeltis Lansoprazole.
+     */
+    public static function getHighestExeltisLansoReward(int $qty): ?string
+    {
+        $options = self::getExeltisLansoOptions($qty);
+
+        return $options[0] ?? null;
+    }
+
+    /**
+     * Get eligible reward options for Exeltis Sucralfate based on ordered quantity.
+     * Highest unlocked tier is placed first.
+     *
+     * @return array<int, string>
+     */
+    public static function getExeltisSucraOptions(int $qty): array
+    {
+        $options = [];
+        foreach (self::EXELTIS_SUCRA_TIERS as $tier) {
+            if ($qty >= $tier['min_qty']) {
+                $options[] = "{$tier['reward']} (Tier {$tier['min_qty']} Botol)";
+            }
+        }
+
+        return array_reverse($options);
+    }
+
+    /**
+     * Get highest unlocked reward for Exeltis Sucralfate.
+     */
+    public static function getHighestExeltisSucraReward(int $qty): ?string
+    {
+        $options = self::getExeltisSucraOptions($qty);
+
+        return $options[0] ?? null;
+    }
+
+    /**
      * Calculate cumulative rewards for a pharmacy across all active orders.
      */
     public function calculateForPharmacy(Pharmacy $pharmacy): array
@@ -111,12 +198,28 @@ class RewardCalculationService
         $newInterbatChoices = max(0, $projectedRewards['choice_quotas']['interbat'] - $previousRewards['choice_quotas']['interbat']);
         $newGrahaNeoChoices = max(0, $projectedRewards['choice_quotas']['graha_neo'] - $previousRewards['choice_quotas']['graha_neo']);
 
+        // Detect Exeltis choices unlocked
+        $projQLanso = $projectedRewards['qty_by_sku']['EXE-001'] ?? 0;
+        $projQSucra = ($projectedRewards['qty_by_sku']['EXE-002'] ?? 0) + ($projectedRewards['qty_by_sku']['EXE-003'] ?? 0);
+
+        $exeltisLansoChoices = $projQLanso >= 5 ? 1 : 0;
+        $exeltisSucraChoices = $projQSucra >= 5 ? 1 : 0;
+
+        $exeltisLansoOptions = self::getExeltisLansoOptions($projQLanso);
+        $exeltisSucraOptions = self::getExeltisSucraOptions($projQSucra);
+
         return [
             'previous' => $previousRewards,
             'projected' => $projectedRewards,
             'unlocked_now' => [
                 'interbat_choice_count' => $newInterbatChoices,
                 'graha_neo_choice_count' => $newGrahaNeoChoices,
+                'exeltis_lanso_choice_count' => $exeltisLansoChoices,
+                'exeltis_lanso_qty' => $projQLanso,
+                'exeltis_lanso_options' => $exeltisLansoOptions,
+                'exeltis_sucra_choice_count' => $exeltisSucraChoices,
+                'exeltis_sucra_qty' => $projQSucra,
+                'exeltis_sucra_options' => $exeltisSucraOptions,
                 'interbat_options' => self::INTERBAT_OPTIONS,
                 'graha_neo_options' => self::GRAHA_NEO_OPTIONS,
             ],
@@ -456,6 +559,8 @@ class RewardCalculationService
         $userChosenOptions = [
             'interbat' => [],
             'graha_neo' => [],
+            'exeltis_lanso' => [],
+            'exeltis_sucra' => [],
         ];
 
         foreach ($selectedChoices as $sel) {
@@ -465,9 +570,28 @@ class RewardCalculationService
             if (! empty($sel['graha_neo'])) {
                 $userChosenOptions['graha_neo'][] = $sel['graha_neo'];
             }
+            if (! empty($sel['exeltis_lanso'])) {
+                $userChosenOptions['exeltis_lanso'][] = $sel['exeltis_lanso'];
+            }
+            if (! empty($sel['exeltis_sucra'])) {
+                $userChosenOptions['exeltis_sucra'][] = $sel['exeltis_sucra'];
+            }
         }
 
-        $totalVouchers = array_sum($vouchersByM);
+        // Auto-default to highest reached tier if tier reached but no specific choice recorded
+        if ($qLanso >= 5 && empty($userChosenOptions['exeltis_lanso'])) {
+            $highestLanso = self::getHighestExeltisLansoReward($qLanso);
+            if ($highestLanso) {
+                $userChosenOptions['exeltis_lanso'][] = $highestLanso;
+            }
+        }
+
+        if ($qSucra >= 5 && empty($userChosenOptions['exeltis_sucra'])) {
+            $highestSucra = self::getHighestExeltisSucraReward($qSucra);
+            if ($highestSucra) {
+                $userChosenOptions['exeltis_sucra'][] = $highestSucra;
+            }
+        }
 
         $choiceSelections = [];
         foreach ($userChosenOptions['interbat'] as $opt) {
@@ -482,6 +606,29 @@ class RewardCalculationService
                 'selected_option' => $opt,
             ];
         }
+        foreach ($userChosenOptions['exeltis_lanso'] as $opt) {
+            $choiceSelections[] = [
+                'manufacturer_slug' => 'exeltis',
+                'selected_option' => $opt,
+            ];
+            if (str_contains($opt, 'Voucher Rp 50.000')) {
+                $vouchersByM['exeltis'] = ($vouchersByM['exeltis'] ?? 0) + 50000;
+            }
+        }
+        foreach ($userChosenOptions['exeltis_sucra'] as $opt) {
+            $choiceSelections[] = [
+                'manufacturer_slug' => 'exeltis',
+                'selected_option' => $opt,
+            ];
+            if (str_contains($opt, 'Voucher Rp 50.000')) {
+                $vouchersByM['exeltis'] = ($vouchersByM['exeltis'] ?? 0) + 50000;
+            }
+        }
+
+        $totalVouchers = array_sum($vouchersByM);
+
+        $choiceQuotas['exeltis_lanso'] = $qLanso >= 5 ? 1 : 0;
+        $choiceQuotas['exeltis_sucra'] = $qSucra >= 5 ? 1 : 0;
 
         return [
             'total_vouchers' => $totalVouchers,
@@ -541,9 +688,10 @@ class RewardCalculationService
             'vouchers_by_manufacturer' => [],
             'voucher_breakdown' => [],
             'physical_rewards' => [],
-            'choice_quotas' => ['interbat' => 0, 'graha_neo' => 0],
-            'choice_rewards_earned' => ['interbat' => 0, 'graha_neo' => 0],
-            'user_chosen_options' => ['interbat' => [], 'graha_neo' => []],
+            'choice_quotas' => ['interbat' => 0, 'graha_neo' => 0, 'exeltis_lanso' => 0, 'exeltis_sucra' => 0],
+            'choice_rewards_earned' => ['interbat' => 0, 'graha_neo' => 0, 'exeltis_lanso' => 0, 'exeltis_sucra' => 0],
+            'user_chosen_options' => ['interbat' => [], 'graha_neo' => [], 'exeltis_lanso' => [], 'exeltis_sucra' => [],
+            ],
             'choice_selections' => [],
             'spending_by_manufacturer' => [],
             'qty_by_sku' => [],
