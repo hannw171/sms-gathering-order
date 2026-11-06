@@ -19,14 +19,23 @@ export default function Onboarding({ event, samplePharmacies }) {
   const { errors, flash, app } = usePage().props;
   const isDev = app?.env === 'local' || !app?.is_production;
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(flash?.searchedQuery || '');
+  const [dismissNotFound, setDismissNotFound] = useState(false);
   const [selectedPharmacy, setSelectedPharmacy] = useState(null);
   const [isDemoConflictModalOpen, setIsDemoConflictModalOpen] = useState(false);
   const [isDemoNotFoundOpen, setIsDemoNotFoundOpen] = useState(false);
 
+  // Sync search with flash when a new search attempt arrives
+  useEffect(() => {
+    if (flash?.searchedQuery !== undefined && flash?.searchedQuery !== null) {
+      setSearch(flash.searchedQuery);
+    }
+    setDismissNotFound(false);
+  }, [flash?.notFound, flash?.searchedQuery]);
+
   // Form for submission
   const { data, setData, post, processing } = useForm({
-    customer_code: '',
+    customer_code: flash?.searchedQuery || '',
     force_takeover: false,
   });
 
@@ -35,8 +44,8 @@ export default function Onboarding({ event, samplePharmacies }) {
   const hasServerConflict = !!flash?.conflict;
 
   // Check if not found returned from server session
-  const isNotFound = isDemoNotFoundOpen || !!flash?.notFound || (errors?.customer_code && !hasServerConflict);
-  const notFoundQuery = flash?.searchedQuery || search || 'Apotek Nusantara 99';
+  const hasNotFoundInProps = !!flash?.notFound || (errors?.customer_code && !hasServerConflict);
+  const isNotFound = (isDemoNotFoundOpen || hasNotFoundInProps) && !dismissNotFound;
 
   // Filter pharmacies based on search
   const filteredPharmacies = useMemo(() => {
@@ -60,6 +69,7 @@ export default function Onboarding({ event, samplePharmacies }) {
     setData('customer_code', p.customer_code);
     setSearch(p.name);
     setIsDemoNotFoundOpen(false);
+    setDismissNotFound(true);
   };
 
   const handleClearSearch = () => {
@@ -67,6 +77,7 @@ export default function Onboarding({ event, samplePharmacies }) {
     setSelectedPharmacy(null);
     setData('customer_code', '');
     setIsDemoNotFoundOpen(false);
+    setDismissNotFound(true);
   };
 
   const handleSubmit = (e) => {
@@ -171,17 +182,22 @@ export default function Onboarding({ event, samplePharmacies }) {
                   <Search className="w-4 h-4 absolute left-3.5 text-slate-400" />
                   <input
                     type="text"
-                    value={search || notFoundQuery}
+                    value={search}
                     onChange={(e) => {
-                      setSearch(e.target.value);
-                      setData('customer_code', e.target.value);
+                      const val = e.target.value;
+                      setSearch(val);
+                      setData('customer_code', val);
+                      if (val === '') {
+                        setDismissNotFound(true);
+                      }
                     }}
+                    placeholder="Ketik nama apotek atau kode..."
                     className="w-full pl-10 pr-9 py-2.5 rounded-[8px] text-[14px] font-medium text-[#131B2E] outline-none border border-slate-300 focus:border-red-500"
                   />
                   <button
                     type="button"
                     onClick={handleClearSearch}
-                    className="absolute right-2.5 text-slate-400 hover:text-slate-600 p-1"
+                    className="absolute right-2.5 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
                     title="Hapus pencarian"
                   >
                     <X className="w-4 h-4" />

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Orders\Schemas;
 
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -29,6 +30,10 @@ class OrderForm
                 TextInput::make('status')
                     ->required()
                     ->default('confirmed'),
+                KeyValue::make('reward_selections')
+                    ->label('Hadiah Pilihan Tamu')
+                    ->columnSpanFull()
+                    ->disabled(),
                 Textarea::make('notes')
                     ->columnSpanFull(),
                 TextInput::make('ip_address'),
