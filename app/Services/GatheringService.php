@@ -9,6 +9,12 @@ use Illuminate\Support\Collection;
 
 class GatheringService
 {
+    public const GRAHA_GRAND_PRIZES = [
+        1 => '1 Unit Smart TV Polytron 32 Inch',
+        2 => '1 Unit Dispenser Cosmos Galon Bawah',
+        3 => '1 Unit Kipas Angin Cosmos',
+    ];
+
     /**
      * Get the real-time leaderboard of pharmacies sorted by total spending.
      * If $manufacturerId is provided, spending is filtered to products from that manufacturer.
@@ -22,15 +28,26 @@ class GatheringService
                 }]);
         }])->get();
 
-        $ranked = $pharmacies->map(function ($pharmacy) use ($manufacturerId) {
+        $manufacturer = $manufacturerId ? Manufacturer::find($manufacturerId) : null;
+        $isGraha = $manufacturer && $manufacturer->slug === 'graha-farma';
+
+        $ranked = $pharmacies->map(function ($pharmacy) use ($manufacturerId, $isGraha) {
+            $matchingItems = $pharmacy->orders->flatMap->items
+                ->filter(function ($item) use ($manufacturerId) {
+                    return ! $manufacturerId || ($item->product && (int) $item->product->manufacturer_id === (int) $manufacturerId);
+                });
+
             if ($manufacturerId) {
-                $totalSpending = (float) $pharmacy->orders->flatMap->items
-                    ->filter(function ($item) use ($manufacturerId) {
-                        return $item->product && (int) $item->product->manufacturer_id === (int) $manufacturerId;
-                    })
-                    ->sum('subtotal');
+                $totalSpending = (float) $matchingItems->sum('subtotal');
             } else {
                 $totalSpending = (float) $pharmacy->orders->sum('total_amount');
+            }
+
+            $regulerBox = 0;
+            $paketCount = 0;
+            if ($isGraha) {
+                $regulerBox = (int) $matchingItems->filter(fn ($item) => ($item->product?->sku ?? '') !== 'GRH-019')->sum('quantity');
+                $paketCount = (int) floor($regulerBox / 99);
             }
 
             $ordersCount = $pharmacy->orders->count();
@@ -43,6 +60,8 @@ class GatheringService
                 'customer_code' => $pharmacy->customer_code,
                 'city' => $pharmacy->city,
                 'total_spending' => $totalSpending,
+                'paket_count' => $paketCount,
+                'reguler_box' => $regulerBox,
                 'orders_count' => $ordersCount,
                 'first_order_at' => $firstOrderAt,
                 'last_order_at' => $lastOrderAt,
@@ -50,7 +69,11 @@ class GatheringService
                 'checked_in_at' => $pharmacy->checked_in_at,
             ];
         })
-            ->sort(function ($a, $b) {
+            ->sort(function ($a, $b) use ($isGraha) {
+                if ($isGraha && $b['paket_count'] !== $a['paket_count']) {
+                    return $b['paket_count'] <=> $a['paket_count'];
+                }
+
                 if ($b['total_spending'] !== $a['total_spending']) {
                     return $b['total_spending'] <=> $a['total_spending'];
                 }
@@ -59,9 +82,15 @@ class GatheringService
             })
             ->values();
 
-        // Assign Rank (1, 2, 3, ...)
-        return $ranked->map(function ($item, $index) {
-            $item['rank'] = $index + 1;
+        // Assign Rank (1, 2, 3, ...) and Grand Prize if Graha
+        return $ranked->map(function ($item, $index) use ($isGraha) {
+            $rank = $index + 1;
+            $item['rank'] = $rank;
+
+            if ($isGraha && $rank <= 3 && $item['paket_count'] >= 1) {
+                $item['grand_prize'] = self::GRAHA_GRAND_PRIZES[$rank] ?? null;
+                $item['grand_prize_title'] = "Juara {$rank}";
+            }
 
             return $item;
         });
@@ -126,13 +155,22 @@ class GatheringService
 
         foreach ($manufacturers as $manufacturer) {
             $mId = (int) $manufacturer->id;
-            $mRanked = $pharmacies->map(function ($pharmacy) use ($mId) {
+            $isGraha = $manufacturer->slug === 'graha-farma';
+
+            $mRanked = $pharmacies->map(function ($pharmacy) use ($mId, $isGraha) {
                 $matchingItems = $pharmacy->orders->flatMap->items
                     ->filter(function ($item) use ($mId) {
                         return $item->product && (int) $item->product->manufacturer_id === $mId;
                     });
 
                 $totalSpending = (float) $matchingItems->sum('subtotal');
+
+                $regulerBox = 0;
+                $paketCount = 0;
+                if ($isGraha) {
+                    $regulerBox = (int) $matchingItems->filter(fn ($item) => ($item->product?->sku ?? '') !== 'GRH-019')->sum('quantity');
+                    $paketCount = (int) floor($regulerBox / 99);
+                }
 
                 return [
                     'id' => $pharmacy->id,
@@ -141,12 +179,18 @@ class GatheringService
                     'table_number' => $pharmacy->table_number,
                     'city' => $pharmacy->city,
                     'total_spending' => $totalSpending,
+                    'paket_count' => $paketCount,
+                    'reguler_box' => $regulerBox,
                     'orders_count' => $pharmacy->orders->count(),
                     'first_order_at' => $pharmacy->orders->min('created_at'),
                     'last_order_at' => $pharmacy->orders->max('created_at'),
                 ];
             })
-                ->sort(function ($a, $b) {
+                ->sort(function ($a, $b) use ($isGraha) {
+                    if ($isGraha && $b['paket_count'] !== $a['paket_count']) {
+                        return $b['paket_count'] <=> $a['paket_count'];
+                    }
+
                     if ($b['total_spending'] !== $a['total_spending']) {
                         return $b['total_spending'] <=> $a['total_spending'];
                     }
@@ -154,8 +198,14 @@ class GatheringService
                     return ($a['first_order_at'] ?? '9999-99-99') <=> ($b['first_order_at'] ?? '9999-99-99');
                 })
                 ->values()
-                ->map(function ($item, $index) {
-                    $item['rank'] = $index + 1;
+                ->map(function ($item, $index) use ($isGraha) {
+                    $rank = $index + 1;
+                    $item['rank'] = $rank;
+
+                    if ($isGraha && $rank <= 3 && $item['paket_count'] >= 1) {
+                        $item['grand_prize'] = self::GRAHA_GRAND_PRIZES[$rank] ?? null;
+                        $item['grand_prize_title'] = "Juara {$rank}";
+                    }
 
                     return $item;
                 });

@@ -7,10 +7,13 @@ use App\Filament\Pages\RewardRecapReport;
 use App\Models\EventSetting;
 use App\Models\Manufacturer;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Pharmacy;
 use App\Models\Product;
 use App\Models\RewardTier;
 use App\Models\User;
+use App\Services\GatheringService;
+use App\Services\RewardCalculationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -635,5 +638,123 @@ class GatheringTest extends TestCase
         $component->callAction('close_all_manufacturers');
         $mfg->refresh();
         $this->assertFalse($mfg->is_ordering_active);
+    }
+
+    public function test_checkout_validates_min_order_and_step_for_flucadex(): void
+    {
+        $flucadex = Product::create([
+            'manufacturer_id' => $this->product->manufacturer_id,
+            'sku' => 'GRH-018',
+            'name' => 'FLUCADEX SYR',
+            'uom' => 'FLS',
+            'price' => 18000,
+            'stock' => 999,
+            'min_order' => 24,
+            'step' => 24,
+            'is_active' => true,
+        ]);
+
+        // 1. Order below min_order (12 fls)
+        $resMin = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->post('/checkout', [
+                'items' => [
+                    ['product_id' => $flucadex->id, 'quantity' => 12],
+                ],
+            ]);
+        $resMin->assertSessionHasErrors('error');
+
+        // 2. Order not a multiple of step (25 fls)
+        $resStep = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->post('/checkout', [
+                'items' => [
+                    ['product_id' => $flucadex->id, 'quantity' => 25],
+                ],
+            ]);
+        $resStep->assertSessionHasErrors('error');
+
+        // 3. Valid order: 24 fls (1 paket)
+        $resValid = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->post('/checkout', [
+                'items' => [
+                    ['product_id' => $flucadex->id, 'quantity' => 24],
+                ],
+            ]);
+        $resValid->assertSessionHasNoErrors();
+        $resValid->assertRedirect();
+    }
+
+    public function test_graha_farma_grand_prize_allocation_and_leaderboard(): void
+    {
+        RewardCalculationService::clearGrandPrizeCache();
+
+        $graha = Manufacturer::create([
+            'name' => 'PT. GRAHA FARMA',
+            'slug' => 'graha-farma',
+            'is_active' => true,
+        ]);
+
+        $flucadex = Product::create([
+            'manufacturer_id' => $graha->id,
+            'sku' => 'GRH-018',
+            'name' => 'FLUCADEX SYR',
+            'uom' => 'FLS',
+            'price' => 18000,
+            'min_order' => 24,
+            'step' => 24,
+            'is_active' => true,
+        ]);
+
+        $pharmacyA = Pharmacy::create(['name' => 'Apotek Juara Satu', 'customer_code' => 'TEST-GP1']);
+        $pharmacyB = Pharmacy::create(['name' => 'Apotek Juara Dua', 'customer_code' => 'TEST-GP2']);
+        $pharmacyC = Pharmacy::create(['name' => 'Apotek Juara Tiga', 'customer_code' => 'TEST-GP3']);
+        $pharmacyD = Pharmacy::create(['name' => 'Apotek Tanpa Hadiah', 'customer_code' => 'TEST-GP4']);
+
+        // Pharmacy A: 297 box (3 paket)
+        $orderA = Order::create(['order_number' => 'PO-GP-001', 'pharmacy_id' => $pharmacyA->id, 'total_amount' => 5346000, 'total_items' => 297, 'status' => 'confirmed']);
+        OrderItem::create(['order_id' => $orderA->id, 'product_id' => $flucadex->id, 'product_name' => $flucadex->name, 'manufacturer_name' => $graha->name, 'price' => 18000, 'quantity' => 297, 'subtotal' => 5346000]);
+
+        // Pharmacy B: 198 box (2 paket)
+        $orderB = Order::create(['order_number' => 'PO-GP-002', 'pharmacy_id' => $pharmacyB->id, 'total_amount' => 3564000, 'total_items' => 198, 'status' => 'confirmed']);
+        OrderItem::create(['order_id' => $orderB->id, 'product_id' => $flucadex->id, 'product_name' => $flucadex->name, 'manufacturer_name' => $graha->name, 'price' => 18000, 'quantity' => 198, 'subtotal' => 3564000]);
+
+        // Pharmacy C: 99 box (1 paket)
+        $orderC = Order::create(['order_number' => 'PO-GP-003', 'pharmacy_id' => $pharmacyC->id, 'total_amount' => 1782000, 'total_items' => 99, 'status' => 'confirmed']);
+        OrderItem::create(['order_id' => $orderC->id, 'product_id' => $flucadex->id, 'product_name' => $flucadex->name, 'manufacturer_name' => $graha->name, 'price' => 18000, 'quantity' => 99, 'subtotal' => 1782000]);
+
+        // Pharmacy D: 48 box (0 paket)
+        $orderD = Order::create(['order_number' => 'PO-GP-004', 'pharmacy_id' => $pharmacyD->id, 'total_amount' => 864000, 'total_items' => 48, 'status' => 'confirmed']);
+        OrderItem::create(['order_id' => $orderD->id, 'product_id' => $flucadex->id, 'product_name' => $flucadex->name, 'manufacturer_name' => $graha->name, 'price' => 18000, 'quantity' => 48, 'subtotal' => 864000]);
+
+        $gatheringService = app(GatheringService::class);
+        $rewardService = app(RewardCalculationService::class);
+
+        // Verify Leaderboard Graha Farma
+        $lb = $gatheringService->getLeaderboard($graha->id);
+        $this->assertEquals($pharmacyA->id, $lb[0]['id']);
+        $this->assertEquals('1 Unit Smart TV Polytron 32 Inch', $lb[0]['grand_prize']);
+        $this->assertEquals(3, $lb[0]['paket_count']);
+
+        $this->assertEquals($pharmacyB->id, $lb[1]['id']);
+        $this->assertEquals('1 Unit Dispenser Cosmos Galon Bawah', $lb[1]['grand_prize']);
+        $this->assertEquals(2, $lb[1]['paket_count']);
+
+        $this->assertEquals($pharmacyC->id, $lb[2]['id']);
+        $this->assertEquals('1 Unit Kipas Angin Cosmos', $lb[2]['grand_prize']);
+        $this->assertEquals(1, $lb[2]['paket_count']);
+
+        $this->assertNull($lb[3]['grand_prize'] ?? null);
+
+        // Verify RewardCalculationService physical_rewards
+        $rewardsA = $rewardService->calculateForPharmacy($pharmacyA);
+        $this->assertArrayHasKey('1 Unit Smart TV Polytron 32 Inch (Grand Prize Graha Farma #1)', $rewardsA['physical_rewards']);
+
+        $rewardsB = $rewardService->calculateForPharmacy($pharmacyB);
+        $this->assertArrayHasKey('1 Unit Dispenser Cosmos Galon Bawah (Grand Prize Graha Farma #2)', $rewardsB['physical_rewards']);
+
+        $rewardsC = $rewardService->calculateForPharmacy($pharmacyC);
+        $this->assertArrayHasKey('1 Unit Kipas Angin Cosmos (Grand Prize Graha Farma #3)', $rewardsC['physical_rewards']);
+
+        $rewardsD = $rewardService->calculateForPharmacy($pharmacyD);
+        $this->assertEmpty($rewardsD['physical_rewards']);
     }
 }

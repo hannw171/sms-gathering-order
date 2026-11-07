@@ -949,8 +949,8 @@ class GatheringSeeder extends Seeder
                 'uom' => 'FLS',
                 'price' => 18000,
                 'stock' => 9999,
-                'min_order' => 1,
-                'step' => 1,
+                'min_order' => 24,
+                'step' => 24,
                 'is_active' => true,
             ],
             [

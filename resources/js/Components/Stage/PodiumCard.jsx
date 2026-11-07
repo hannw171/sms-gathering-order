@@ -132,8 +132,23 @@ export default function PodiumCard({
         </div>
 
         {/* ----------------- Decorative Center Emblem (Eliminates Awkward Dead Space) ----------------- */}
-        <div className="my-auto py-2 flex items-center justify-center">
-          {isRank1 ? (
+        <div className="my-auto py-1.5 flex flex-col items-center justify-center w-full">
+          {item?.grand_prize ? (
+            <div className="w-full bg-gradient-to-r from-amber-500/15 via-amber-400/25 to-amber-500/15 border border-amber-400/60 rounded-2xl p-2 shadow-xs text-center">
+              <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-wider text-amber-900 block flex items-center justify-center gap-1">
+                <span>🎁</span>
+                <span>GRAND PRIZE {item.grand_prize_title ? `(${item.grand_prize_title})` : ''}</span>
+              </span>
+              <span className="text-xs lg:text-sm font-black text-slate-900 block leading-tight mt-0.5">
+                {item.grand_prize}
+              </span>
+              {item.paket_count > 0 && (
+                <span className="text-[10px] lg:text-[11px] font-bold text-amber-800 bg-white/80 border border-amber-200/80 px-2 py-0.5 rounded-full inline-block mt-1">
+                  📦 {item.paket_count} Paket ({item.reguler_box} Box)
+                </span>
+              )}
+            </div>
+          ) : isRank1 ? (
             <div className="w-14 h-14 lg:w-16 lg:h-16 rounded-2xl bg-gradient-to-tr from-amber-100 to-amber-50 border border-amber-300/60 flex items-center justify-center shadow-inner text-amber-600/80">
               <Trophy className="w-7 h-7 lg:w-8 lg:h-8 stroke-[2.2]" />
             </div>

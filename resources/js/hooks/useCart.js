@@ -32,6 +32,8 @@ function readCartFromStorage(key) {
           uom: item.uom || 'Box',
           price: Number(item.price) || 0,
           manufacturer_name: item.manufacturer_name || '',
+          step: parseInt(item.step, 10) || 1,
+          min_order: parseInt(item.min_order, 10) || 1,
           quantity: Math.max(1, parseInt(item.quantity, 10) || 1),
         };
       }
@@ -163,6 +165,8 @@ export function useCart(explicitPharmacyId) {
             price: !isNaN(parseFloat(itemObj.price)) ? parseFloat(itemObj.price) : existing.price,
             manufacturer_name:
               itemObj.manufacturer?.name || itemObj.manufacturer_name || existing.manufacturer_name,
+            step: itemObj.step || existing.step || 1,
+            min_order: itemObj.min_order || existing.min_order || 1,
             quantity: validQty,
           };
         } else if (typeof productOrId === 'object' && productOrId !== null && productOrId.name) {
@@ -174,6 +178,8 @@ export function useCart(explicitPharmacyId) {
             uom: productOrId.uom || 'Box',
             price: !isNaN(parseFloat(productOrId.price)) ? parseFloat(productOrId.price) : 0,
             manufacturer_name: productOrId.manufacturer?.name || productOrId.manufacturer_name || '',
+            step: productOrId.step || 1,
+            min_order: productOrId.min_order || 1,
             quantity: validQty,
           };
         }

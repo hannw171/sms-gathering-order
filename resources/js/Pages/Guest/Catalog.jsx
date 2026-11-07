@@ -385,6 +385,11 @@ export default function Catalog({
                     <span className="font-bold text-sm text-brand-700">
                       {formatRupiah(product.price)}
                     </span>
+                    {(product.step > 1 || product.min_order > 1) && (
+                      <span className="block text-[9px] font-semibold text-amber-700 bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 rounded-md mt-0.5 w-fit">
+                        Wajib kelipatan {product.step || product.min_order} {product.uom}
+                      </span>
+                    )}
                   </div>
 
                   {/* Quantity Stepper or Closed Badge */}
@@ -398,6 +403,8 @@ export default function Catalog({
                       onChange={(newQty) => updateQuantity(product, newQty)}
                       min={0}
                       max={9999}
+                      step={product.step || 1}
+                      minOrder={product.min_order || 1}
                     />
                   )}
                 </div>

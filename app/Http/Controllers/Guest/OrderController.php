@@ -87,7 +87,7 @@ class OrderController extends Controller
             'reward_selections' => ['nullable', 'array'],
         ]);
 
-        // Validate manufacturer-specific session availability
+        // Validate manufacturer-specific session availability, min_order, and step
         foreach ($request->items as $item) {
             $product = Product::with('manufacturer')->findOrFail($item['product_id']);
             if ($product->manufacturer && ! $product->manufacturer->isOrderingOpen()) {
@@ -98,6 +98,15 @@ class OrderController extends Controller
                     : "Sesi pemesanan untuk pabrikan {$mName} sedang ditutup oleh panitia.";
 
                 return back()->withErrors(['error' => $msg]);
+            }
+
+            $qty = (int) $item['quantity'];
+            if ($product->min_order > 1 && $qty < $product->min_order) {
+                return back()->withErrors(['error' => "Produk {$product->name} wajib dipesan minimal {$product->min_order} {$product->uom}."]);
+            }
+
+            if ($product->step > 1 && ($qty % $product->step !== 0)) {
+                return back()->withErrors(['error' => "Pemesanan {$product->name} harus dalam kelipatan {$product->step} {$product->uom}."]);
             }
         }
 

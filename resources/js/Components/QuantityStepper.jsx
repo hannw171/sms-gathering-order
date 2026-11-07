@@ -6,6 +6,8 @@ export default function QuantityStepper({
   onChange,
   min = 0,
   max = 9999,
+  step = 1,
+  minOrder = 1,
   size = 'md',
   className = '',
 }) {
@@ -18,16 +20,21 @@ export default function QuantityStepper({
 
   const commitValue = (val) => {
     const parsed = parseInt(val, 10);
-    if (isNaN(parsed) || parsed < min) {
+    if (isNaN(parsed) || parsed <= 0) {
       setInputValue(String(min));
       if (onChange) onChange(min);
-    } else if (parsed > max) {
-      setInputValue(String(max));
-      if (onChange) onChange(max);
-    } else {
-      setInputValue(String(parsed));
-      if (onChange) onChange(parsed);
+      return;
     }
+
+    let clamped = Math.min(max, Math.max(minOrder, parsed));
+    if (step > 1) {
+      clamped = Math.round(clamped / step) * step;
+      if (clamped < minOrder) clamped = minOrder;
+      if (clamped > max) clamped = max;
+    }
+
+    setInputValue(String(clamped));
+    if (onChange) onChange(clamped);
   };
 
   const handleInputChange = (e) => {
@@ -65,13 +72,29 @@ export default function QuantityStepper({
 
   const handleIncrement = () => {
     const current = parseInt(inputValue, 10) || 0;
-    const next = Math.min(max, current + 1);
+    const stepVal = Math.max(1, parseInt(step, 10) || 1);
+    const minVal = Math.max(stepVal, parseInt(minOrder, 10) || 1);
+
+    let next;
+    if (current === 0) {
+      next = Math.min(max, minVal);
+    } else {
+      next = Math.min(max, current + stepVal);
+    }
     commitValue(next);
   };
 
   const handleDecrement = () => {
     const current = parseInt(inputValue, 10) || 0;
-    const next = Math.max(min, current - 1);
+    const stepVal = Math.max(1, parseInt(step, 10) || 1);
+    const minVal = Math.max(stepVal, parseInt(minOrder, 10) || 1);
+
+    let next;
+    if (current - stepVal < minVal || current <= minVal) {
+      next = min; // Return to 0
+    } else {
+      next = Math.max(min, current - stepVal);
+    }
     commitValue(next);
   };
 

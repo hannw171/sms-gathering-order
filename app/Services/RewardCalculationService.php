@@ -115,6 +115,93 @@ class RewardCalculationService
     }
 
     /**
+     * Cache for Graha Farma Grand Prize winners: [pharmacy_id => prize_info]
+     *
+     * @var array<int, array{rank: int, prize: string, paket_count: int, reguler_box: int}>|null
+     */
+    protected static ?array $grahaGrandPrizeWinnersCache = null;
+
+    public static function clearGrandPrizeCache(): void
+    {
+        self::$grahaGrandPrizeWinnersCache = null;
+    }
+
+    /**
+     * Determine Top 3 Grand Prize winners for PT. GRAHA FARMA based on regular package count.
+     *
+     * @return array<int, array{rank: int, prize: string, paket_count: int, reguler_box: int}>
+     */
+    public function getGrahaGrandPrizeWinners(): array
+    {
+        if (self::$grahaGrandPrizeWinnersCache !== null) {
+            return self::$grahaGrandPrizeWinnersCache;
+        }
+
+        $pharmacies = Pharmacy::whereHas('orders', fn ($q) => $q->where('status', '!=', 'cancelled'))
+            ->with(['orders' => function ($q) {
+                $q->where('status', '!=', 'cancelled')
+                    ->with(['items.product']);
+            }])
+            ->get();
+
+        $ranked = $pharmacies->map(function ($pharmacy) {
+            $grahaRegulerBox = 0;
+            foreach ($pharmacy->orders as $order) {
+                foreach ($order->items as $item) {
+                    $sku = $item->product?->sku ?? '';
+                    if (str_starts_with($sku, 'GRH-') && $sku !== 'GRH-019') {
+                        $grahaRegulerBox += (int) $item->quantity;
+                    }
+                }
+            }
+
+            $paketCount = (int) floor($grahaRegulerBox / 99);
+            $firstOrderAt = $pharmacy->orders->min('created_at');
+
+            return [
+                'pharmacy_id' => $pharmacy->id,
+                'paket_count' => $paketCount,
+                'reguler_box' => $grahaRegulerBox,
+                'first_order_at' => $firstOrderAt,
+            ];
+        })
+            ->filter(fn ($item) => $item['paket_count'] >= 1)
+            ->sort(function ($a, $b) {
+                if ($b['paket_count'] !== $a['paket_count']) {
+                    return $b['paket_count'] <=> $a['paket_count'];
+                }
+                if ($b['reguler_box'] !== $a['reguler_box']) {
+                    return $b['reguler_box'] <=> $a['reguler_box'];
+                }
+
+                return ($a['first_order_at'] ?? '9999-99-99') <=> ($b['first_order_at'] ?? '9999-99-99');
+            })
+            ->values()
+            ->take(3);
+
+        $prizes = [
+            1 => '1 Unit Smart TV Polytron 32 Inch (Grand Prize Graha Farma #1)',
+            2 => '1 Unit Dispenser Cosmos Galon Bawah (Grand Prize Graha Farma #2)',
+            3 => '1 Unit Kipas Angin Cosmos (Grand Prize Graha Farma #3)',
+        ];
+
+        $winners = [];
+        foreach ($ranked as $idx => $entry) {
+            $rank = $idx + 1;
+            $winners[$entry['pharmacy_id']] = [
+                'rank' => $rank,
+                'prize' => $prizes[$rank],
+                'paket_count' => $entry['paket_count'],
+                'reguler_box' => $entry['reguler_box'],
+            ];
+        }
+
+        self::$grahaGrandPrizeWinnersCache = $winners;
+
+        return self::$grahaGrandPrizeWinnersCache;
+    }
+
+    /**
      * Calculate cumulative rewards for a pharmacy across all active orders.
      */
     public function calculateForPharmacy(Pharmacy $pharmacy): array
@@ -128,7 +215,16 @@ class RewardCalculationService
                 ->get();
         }
 
-        return $this->evaluateOrders($orders);
+        $results = $this->evaluateOrders($orders);
+
+        // Inject Grand Prize for Graha Farma if this pharmacy is in Top 3
+        $grandPrizeWinners = $this->getGrahaGrandPrizeWinners();
+        if (isset($grandPrizeWinners[$pharmacy->id])) {
+            $winner = $grandPrizeWinners[$pharmacy->id];
+            $results['physical_rewards'][$winner['prize']] = 1;
+        }
+
+        return $results;
     }
 
     /**
@@ -153,6 +249,8 @@ class RewardCalculationService
      */
     public function getAllPharmaciesRewardsSummary(): Collection
     {
+        $grandPrizeWinners = $this->getGrahaGrandPrizeWinners();
+
         $pharmacies = Pharmacy::with([
             'orders' => function ($q) {
                 $q->where('status', '!=', 'cancelled')
@@ -160,9 +258,15 @@ class RewardCalculationService
             },
         ])->orderBy('customer_code')->get();
 
-        return $pharmacies->map(function (Pharmacy $pharmacy) {
+        return $pharmacies->map(function (Pharmacy $pharmacy) use ($grandPrizeWinners) {
             $orders = $pharmacy->orders;
             $rewards = $this->evaluateOrders($orders);
+
+            if (isset($grandPrizeWinners[$pharmacy->id])) {
+                $winner = $grandPrizeWinners[$pharmacy->id];
+                $rewards['physical_rewards'][$winner['prize']] = 1;
+            }
+
             $totalSpending = (float) $orders->sum('total_amount');
             $hasReward = (
                 ($rewards['total_vouchers'] ?? 0) > 0 ||

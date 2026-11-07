@@ -467,8 +467,10 @@ export default function Cart({
                     <QuantityStepper
                       value={item.quantity}
                       onChange={(newQty) => updateQuantity(item, newQty)}
-                      min={1}
+                      min={item.min_order || 1}
                       max={9999}
+                      step={item.step || 1}
+                      minOrder={item.min_order || 1}
                       size="sm"
                     />
 

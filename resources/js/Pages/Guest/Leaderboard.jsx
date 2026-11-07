@@ -455,6 +455,12 @@ export default function Leaderboard({
                     <span className="text-[10px] text-slate-400 block mb-1 truncate max-w-full">
                       {top3[1].city || 'Jawa Tengah'}
                     </span>
+                    {top3[1].grand_prize && (
+                      <span className="text-[9px] font-bold text-amber-900 bg-amber-100/90 border border-amber-300/80 px-1.5 py-0.5 rounded-md block my-1 leading-tight">
+                        🎁 {top3[1].grand_prize}
+                        {top3[1].paket_count > 0 && ` (${top3[1].paket_count} Pkt)`}
+                      </span>
+                    )}
                   </div>
                   <span className="font-bold text-[11px] text-slate-700 font-mono block">
                     {formatRupiah(top3[1].total_spending)}
@@ -482,6 +488,12 @@ export default function Leaderboard({
                     <span className="text-[10px] text-amber-700 font-semibold block mb-1 truncate max-w-full">
                       {top3[0].city || 'Jawa Tengah'}
                     </span>
+                    {top3[0].grand_prize && (
+                      <span className="text-[9px] font-bold text-amber-950 bg-amber-200/90 border border-amber-400 px-1.5 py-0.5 rounded-md block my-1 leading-tight">
+                        👑 {top3[0].grand_prize}
+                        {top3[0].paket_count > 0 && ` (${top3[0].paket_count} Pkt)`}
+                      </span>
+                    )}
                   </div>
                   <span className="font-black text-xs text-brand-700 font-mono block">
                     {formatRupiah(top3[0].total_spending)}
@@ -509,6 +521,12 @@ export default function Leaderboard({
                     <span className="text-[10px] text-slate-400 block mb-1 truncate max-w-full">
                       {top3[2].city || 'Jawa Tengah'}
                     </span>
+                    {top3[2].grand_prize && (
+                      <span className="text-[9px] font-bold text-amber-900 bg-amber-100/90 border border-amber-300/80 px-1.5 py-0.5 rounded-md block my-1 leading-tight">
+                        🎁 {top3[2].grand_prize}
+                        {top3[2].paket_count > 0 && ` (${top3[2].paket_count} Pkt)`}
+                      </span>
+                    )}
                   </div>
                   <span className="font-bold text-[11px] text-slate-700 font-mono block">
                     {formatRupiah(top3[2].total_spending)}
