@@ -757,4 +757,72 @@ class GatheringTest extends TestCase
         $rewardsD = $rewardService->calculateForPharmacy($pharmacyD);
         $this->assertEmpty($rewardsD['physical_rewards']);
     }
+
+    public function test_follow_up_order_only_unlocks_choices_for_products_in_cart(): void
+    {
+        $exeltis = Manufacturer::create([
+            'name' => 'EXELTIS',
+            'slug' => 'exeltis',
+            'is_active' => true,
+        ]);
+
+        $lanso = Product::create([
+            'manufacturer_id' => $exeltis->id,
+            'sku' => 'EXE-001',
+            'name' => 'Lansoprazole 30mg',
+            'uom' => 'Box',
+            'price' => 10000,
+            'is_active' => true,
+        ]);
+
+        $sucra = Product::create([
+            'manufacturer_id' => $exeltis->id,
+            'sku' => 'EXE-002',
+            'name' => 'Sucralfate 60ml',
+            'uom' => 'Botol',
+            'price' => 9500,
+            'is_active' => true,
+        ]);
+
+        // PO 1: 200 box Lansoprazole
+        $order1 = Order::create([
+            'order_number' => 'PO-TEST-0001',
+            'pharmacy_id' => $this->pharmacy->id,
+            'total_amount' => 2000000,
+            'total_items' => 200,
+            'status' => 'confirmed',
+            'reward_selections' => [
+                'exeltis_lanso' => 'Panci Set 3in 1 (Tier 200 Box)',
+            ],
+        ]);
+        OrderItem::create([
+            'order_id' => $order1->id,
+            'product_id' => $lanso->id,
+            'product_name' => $lanso->name,
+            'manufacturer_name' => $exeltis->name,
+            'price' => 10000,
+            'quantity' => 200,
+            'subtotal' => 2000000,
+        ]);
+
+        // Cart for PO 2: ONLY 150 botol Sucralfate (no Lansoprazole in this cart!)
+        $rewardService = app(RewardCalculationService::class);
+        $preview = $rewardService->evaluateCart([
+            [
+                'product_id' => $sucra->id,
+                'quantity' => 150,
+                'price' => 9500,
+                'name' => $sucra->name,
+            ],
+        ], $this->pharmacy);
+
+        // Lansoprazole choice count must be 0 for this cart!
+        $this->assertEquals(0, $preview['unlocked_now']['exeltis_lanso_choice_count']);
+        $this->assertEquals(0, $preview['unlocked_now']['exeltis_lanso_qty']);
+
+        // Sucralfate choice count must be 1 with 150 qty!
+        $this->assertEquals(1, $preview['unlocked_now']['exeltis_sucra_choice_count']);
+        $this->assertEquals(150, $preview['unlocked_now']['exeltis_sucra_qty']);
+        $this->assertNotEmpty($preview['unlocked_now']['exeltis_sucra_options']);
+    }
 }

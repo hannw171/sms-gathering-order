@@ -321,15 +321,15 @@ class RewardCalculationService
         $newInterbatChoices = max(0, $projectedRewards['choice_quotas']['interbat'] - $previousRewards['choice_quotas']['interbat']);
         $newGrahaNeoChoices = max(0, $projectedRewards['choice_quotas']['graha_neo'] - $previousRewards['choice_quotas']['graha_neo']);
 
-        // Detect Exeltis choices unlocked
-        $projQLanso = $projectedRewards['qty_by_sku']['EXE-001'] ?? 0;
-        $projQSucra = ($projectedRewards['qty_by_sku']['EXE-002'] ?? 0) + ($projectedRewards['qty_by_sku']['EXE-003'] ?? 0);
+        // Detect Exeltis choices unlocked in this specific cart
+        $cartQLanso = $cartAggregates['qty_by_sku']['EXE-001'] ?? 0;
+        $cartQSucra = ($cartAggregates['qty_by_sku']['EXE-002'] ?? 0) + ($cartAggregates['qty_by_sku']['EXE-003'] ?? 0);
 
-        $exeltisLansoChoices = $projQLanso >= 5 ? 1 : 0;
-        $exeltisSucraChoices = $projQSucra >= 5 ? 1 : 0;
+        $exeltisLansoChoices = $cartQLanso >= 5 ? 1 : 0;
+        $exeltisSucraChoices = $cartQSucra >= 5 ? 1 : 0;
 
-        $exeltisLansoOptions = self::getExeltisLansoOptions($projQLanso);
-        $exeltisSucraOptions = self::getExeltisSucraOptions($projQSucra);
+        $exeltisLansoOptions = $cartQLanso >= 5 ? self::getExeltisLansoOptions($cartQLanso) : [];
+        $exeltisSucraOptions = $cartQSucra >= 5 ? self::getExeltisSucraOptions($cartQSucra) : [];
 
         return [
             'previous' => $previousRewards,
@@ -338,10 +338,10 @@ class RewardCalculationService
                 'interbat_choice_count' => $newInterbatChoices,
                 'graha_neo_choice_count' => $newGrahaNeoChoices,
                 'exeltis_lanso_choice_count' => $exeltisLansoChoices,
-                'exeltis_lanso_qty' => $projQLanso,
+                'exeltis_lanso_qty' => $cartQLanso,
                 'exeltis_lanso_options' => $exeltisLansoOptions,
                 'exeltis_sucra_choice_count' => $exeltisSucraChoices,
-                'exeltis_sucra_qty' => $projQSucra,
+                'exeltis_sucra_qty' => $cartQSucra,
                 'exeltis_sucra_options' => $exeltisSucraOptions,
                 'interbat_options' => self::INTERBAT_OPTIONS,
                 'graha_neo_options' => self::GRAHA_NEO_OPTIONS,

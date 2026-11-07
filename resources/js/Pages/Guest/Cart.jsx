@@ -98,6 +98,13 @@ export default function Cart({
   const unlockedPrograms = useMemo(() => {
     const list = [];
 
+    const hasLansoInCart = cartItems.some(
+      (item) => item.sku === 'EXE-001' || (item.name && item.name.toLowerCase().includes('lanso'))
+    );
+    const hasSucraInCart = cartItems.some(
+      (item) => item.sku === 'EXE-002' || item.sku === 'EXE-003' || (item.name && item.name.toLowerCase().includes('sucra'))
+    );
+
     const grahaNeoCount = unlockedNow.graha_neo_choice_count || 0;
     if (grahaNeoCount > 0) {
       for (let i = 1; i <= grahaNeoCount; i++) {
@@ -136,6 +143,7 @@ export default function Cart({
     }
 
     if (
+      hasLansoInCart &&
       (unlockedNow.exeltis_lanso_choice_count || 0) > 0 &&
       (unlockedNow.exeltis_lanso_options?.length || 0) > 0
     ) {
@@ -153,6 +161,7 @@ export default function Cart({
     }
 
     if (
+      hasSucraInCart &&
       (unlockedNow.exeltis_sucra_choice_count || 0) > 0 &&
       (unlockedNow.exeltis_sucra_options?.length || 0) > 0
     ) {
@@ -170,23 +179,26 @@ export default function Cart({
     }
 
     return list;
-  }, [unlockedNow, rewardOptions]);
+  }, [unlockedNow, rewardOptions, cartItems]);
 
   // Synchronize smart default selections whenever unlocked programs change
   useEffect(() => {
-    if (unlockedPrograms.length > 0) {
-      setSelectedChoices((prev) => {
-        let changed = false;
-        const next = { ...prev };
-        unlockedPrograms.forEach((prog) => {
-          if (!next[prog.key] || !prog.options.includes(next[prog.key])) {
-            next[prog.key] = prog.options[0];
-            changed = true;
-          }
-        });
-        return changed ? next : prev;
+    setSelectedChoices((prev) => {
+      let changed = false;
+      const next = {};
+      unlockedPrograms.forEach((prog) => {
+        if (prev[prog.key] && prog.options.includes(prev[prog.key])) {
+          next[prog.key] = prev[prog.key];
+        } else {
+          next[prog.key] = prog.options[0];
+          changed = true;
+        }
       });
-    }
+      if (Object.keys(prev).some((k) => !next[k])) {
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
   }, [unlockedPrograms]);
 
   // Projected spending after this order
