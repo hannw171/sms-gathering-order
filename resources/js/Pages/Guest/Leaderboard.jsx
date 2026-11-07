@@ -51,6 +51,7 @@ export default function Leaderboard({
   };
 
   const [activeTab, setActiveTab] = useState(resolveInitialTab);
+  const anySessionOpen = (manufacturers || []).some((m) => m.is_ordering_open);
 
   // Dynamic session resolution (per-manufacturer, multi-manufacturer, or overall)
   const resolveCurrentSessionInfo = () => {
@@ -402,16 +403,16 @@ export default function Leaderboard({
       ) : (
         <>
           {/* Top 3 Podium Area */}
-      <div className="px-3.5 mb-5">
-        <div className="flex items-center justify-between mb-2.5">
-          <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-            <Crown className="w-4 h-4 text-amber-500" />
-            <span>
-              {activeTab === 'all'
-                ? 'TOP 3 MOST SPENDER GATHERING'
-                : `TOP 3 SPENDER: ${activeTabObj.name.toUpperCase()}`}
-            </span>
-          </div>
+          <div className="px-3.5 mb-5">
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Crown className="w-4 h-4 text-amber-500" />
+                <span>
+                  {activeTab === 'all'
+                    ? 'TOP 3 MOST SPENDER GATHERING'
+                    : `TOP 3 SPENDER: ${activeTabObj.name.toUpperCase()}`}
+                </span>
+              </div>
           <span className="text-[10px] font-semibold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-md">
             Realtime
           </span>

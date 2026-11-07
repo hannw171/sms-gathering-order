@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Head } from '@inertiajs/react';
 import { formatRupiah, formatCountdown } from '../../utils/format';
 import PodiumCard from '../../Components/Stage/PodiumCard';
@@ -98,8 +98,11 @@ export default function StageLeaderboard({
 
   const [sessionInfo, setSessionInfo] = useState(resolveCurrentSessionInfo);
 
+  // Check if any manufacturer session is currently open
+  const anySessionOpen = (manufacturers || []).some((m) => m.is_ordering_open);
+
   // Tabs list: [Overall, ...Manufacturers]
-  const tabs = [
+  const tabs = useMemo(() => [
     { id: 'all', name: 'Semua Pabrik (Overall)', isOverall: true, is_ordering_open: true },
     ...(manufacturers || []).map((m) => ({
       id: m.id,
@@ -109,13 +112,15 @@ export default function StageLeaderboard({
       session_end_at: m.session_end_at,
       isOverall: false,
     })),
-  ];
+  ], [manufacturers]);
 
   // Rotating Tabs list for Stage Auto-Rotate: Overall + ONLY OPEN Manufacturers
-  const rotatingTabs = [
-    tabs[0],
-    ...tabs.slice(1).filter((t) => t.is_ordering_open),
-  ];
+  const rotatingTabs = useMemo(() => {
+    return [
+      tabs[0],
+      ...tabs.slice(1).filter((t) => t.is_ordering_open),
+    ];
+  }, [tabs]);
 
   // Ref to hold current state for interval callbacks
   const activeTabRef = useRef(activeTab);
@@ -134,9 +139,9 @@ export default function StageLeaderboard({
     return () => clearInterval(timer);
   }, [activeTab, manufacturers, event?.session_end_at]);
 
-  // If currently active tab's session is closed while auto-rotate is on, fall back to Overall
+  // If a session was running and expires while activeTab is on it, fall back to Overall
   useEffect(() => {
-    if (isAutoRotate && activeTab !== 'all') {
+    if (anySessionOpen && isAutoRotate && activeTab !== 'all') {
       const isStillOpen = (manufacturers || []).some(
         (m) => m.id === activeTab && m.is_ordering_open
       );
@@ -145,7 +150,7 @@ export default function StageLeaderboard({
         setSlideSecondsLeft(SLIDE_DURATION_SECONDS);
       }
     }
-  }, [manufacturers, isAutoRotate, activeTab]);
+  }, [manufacturers, isAutoRotate, activeTab, anySessionOpen]);
 
   // Auto-rotate Carousel effect (15s per category - ONLY rotates between Overall + Open Manufacturers)
   useEffect(() => {
@@ -155,11 +160,8 @@ export default function StageLeaderboard({
       setSlideSecondsLeft((prev) => {
         const curTabs = rotatingTabsRef.current;
 
-        // If only 1 tab available (Overall only, no manufacturer sessions active)
+        // If no open manufacturer sessions, stay on current tab without forcing redirect
         if (curTabs.length <= 1) {
-          if (activeTabRef.current !== 'all') {
-            setActiveTab('all');
-          }
           return SLIDE_DURATION_SECONDS;
         }
 
@@ -203,6 +205,10 @@ export default function StageLeaderboard({
   const handleSelectTab = (tabId) => {
     setActiveTab(tabId);
     setSlideSecondsLeft(SLIDE_DURATION_SECONDS); // reset timer
+    // If no sessions are open, pause auto-rotate so operator has full manual control
+    if (!anySessionOpen) {
+      setIsAutoRotate(false);
+    }
   };
 
   // Toggle Auto-Rotate Play / Pause
@@ -308,7 +314,9 @@ export default function StageLeaderboard({
                   isActive
                     ? 'bg-brand-600 text-white shadow-sm ring-2 ring-brand-600/30'
                     : isClosed
-                    ? 'bg-slate-50 text-slate-400 hover:bg-slate-100 border border-slate-200/60 opacity-60'
+                    ? anySessionOpen
+                      ? 'bg-slate-50 text-slate-400 hover:bg-slate-100 border border-slate-200/60 opacity-60'
+                      : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-xs'
                     : 'bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 shadow-xs'
                 }`}
               >
