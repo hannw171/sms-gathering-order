@@ -522,6 +522,32 @@ export default function Cart({
               </div>
             </div>
 
+            {/* Program Terms & Benefits Box */}
+            <div className="bg-gradient-to-br from-blue-50/90 via-indigo-50/50 to-blue-50/90 border border-blue-200/90 rounded-2xl p-3.5 shadow-xs">
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="w-5 h-5 rounded-md bg-blue-600 text-white flex items-center justify-center text-[11px] font-bold shrink-0">
+                  ℹ️
+                </div>
+                <span className="text-xs font-bold text-blue-950 uppercase tracking-wide">
+                  Informasi &amp; Ketentuan Program
+                </span>
+              </div>
+              <ul className="text-[11px] text-slate-700 space-y-1 pl-1 leading-relaxed">
+                <li className="flex items-start gap-1.5">
+                  <span className="text-blue-600 font-bold shrink-0">•</span>
+                  <span>
+                    Program alokasi berlaku selama <strong>3 Bulan</strong>, tetapi <strong>wajib deal pada saat acara hari ini</strong>.
+                  </span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="text-blue-600 font-bold shrink-0">•</span>
+                  <span>
+                    Semua program promo, voucher, dan hadiah <strong>berlaku kelipatan</strong>.
+                  </span>
+                </li>
+              </ul>
+            </div>
+
             {/* Manufacturer Specific Closed Notice */}
             {closedCartItems.length > 0 && (
               <div className="bg-rose-50 border border-rose-300 rounded-2xl p-3.5 flex items-start gap-2.5 text-xs text-rose-900 shadow-xs">
@@ -596,6 +622,10 @@ export default function Cart({
               <strong className="text-slate-800">{formatRupiah(totalAmount)}</strong> untuk Apotek{' '}
               <strong>{pharmacy?.name}</strong>.
             </p>
+
+            <div className="bg-blue-50 border border-blue-200/80 rounded-xl p-2.5 text-[10.5px] text-blue-900 mb-3 text-left leading-relaxed">
+              💡 <strong>Pengingat Program:</strong> Berlaku kelipatan &amp; alokasi dapat dijadwalkan hingga 3 bulan (wajib deal saat acara hari ini).
+            </div>
 
             {/* Choice Summary in Confirmation */}
             {unlockedPrograms.length > 0 && (

@@ -342,6 +342,24 @@ export default function Catalog({
           </div>
         )}
 
+        {/* Gathering Program Rules Banner */}
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50/60 to-blue-50 border border-blue-200/80 rounded-2xl p-2.5 px-3 flex items-start gap-2.5 shadow-2xs mb-2.5">
+          <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs text-xs">
+            ✨
+          </div>
+          <div className="text-[11px] leading-snug text-slate-700">
+            <div className="font-bold text-blue-950 flex items-center gap-1.5 flex-wrap">
+              <span>Ketentuan Promo Gathering:</span>
+              <span className="text-[10px] font-black text-blue-700 bg-blue-100/90 px-1.5 py-0.2 rounded-md">
+                Berlaku Kelipatan
+              </span>
+            </div>
+            <p className="text-[10.5px] text-slate-600 mt-0.5">
+              Program alokasi berlaku <strong>3 bulan</strong> dengan <strong>wajib deal saat acara hari ini</strong>. Kumpulkan order sebanyak-banyaknya!
+            </p>
+          </div>
+        </div>
+
         {products.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 text-center border border-slate-200/80 my-4 shadow-sm">
             <ShoppingBag className="w-12 h-12 text-slate-300 mx-auto mb-2" />
