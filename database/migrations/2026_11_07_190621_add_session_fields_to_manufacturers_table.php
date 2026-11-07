@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('manufacturers', function (Blueprint $table) {
-            $table->boolean('is_ordering_active')->default(true)->after('is_active');
+            $table->boolean('is_ordering_active')->default(false)->after('is_active');
             $table->dateTime('session_end_at')->nullable()->after('is_ordering_active');
         });
     }

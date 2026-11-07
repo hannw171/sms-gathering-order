@@ -30,7 +30,7 @@ class ManufacturerForm
                 Toggle::make('is_ordering_active')
                     ->label('Sesi Pemesanan (PO) Aktif')
                     ->helperText('Buka atau tutup sesi pemesanan produk untuk pabrikan ini.')
-                    ->default(true),
+                    ->default(false),
                 DateTimePicker::make('session_end_at')
                     ->label('Batas Waktu Sesi (Hitung Mundur)')
                     ->helperText('Kosongkan jika aktif tanpa batas waktu.')

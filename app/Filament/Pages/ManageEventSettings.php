@@ -315,6 +315,26 @@ class ManageEventSettings extends Page
                         ->send();
                 }),
 
+            Action::make('close_all_manufacturers')
+                ->label('Tutup Semua Pabrik')
+                ->icon('heroicon-o-x-circle')
+                ->color('danger')
+                ->requiresConfirmation()
+                ->modalHeading('Tutup Sesi Seluruh Pabrikan?')
+                ->modalDescription('Sesi pemesanan seluruh pabrikan akan ditutup (tamu tidak dapat memesan hingga dibuka kembali).')
+                ->action(function () {
+                    Manufacturer::query()->update([
+                        'is_ordering_active' => false,
+                        'session_end_at' => null,
+                    ]);
+
+                    Notification::make()
+                        ->warning()
+                        ->title('Seluruh Pabrikan Telah Ditutup')
+                        ->body('Tamu tidak dapat memesan produk untuk pabrikan yang ditutup.')
+                        ->send();
+                }),
+
             Action::make('open_stage')
                 ->label('Layar Panggung')
                 ->icon('heroicon-o-arrow-top-right-on-square')

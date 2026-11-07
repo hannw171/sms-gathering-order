@@ -2,96 +2,101 @@
     $manufacturers = \App\Models\Manufacturer::where('is_active', true)->orderBy('sort_order')->get();
 @endphp
 
-<div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-    <table class="w-full text-left text-xs">
-        <thead class="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 font-bold uppercase tracking-wider">
-            <tr>
-                <th class="py-2.5 px-3.5">Pabrikan</th>
-                <th class="py-2.5 px-3.5">Status Sesi PO</th>
-                <th class="py-2.5 px-3.5">Batas Waktu Sesi</th>
-                <th class="py-2.5 px-3.5 text-right">Kontrol Cepat Sesi</th>
-            </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100 dark:divide-gray-800 text-gray-800 dark:text-gray-200">
-            @foreach($manufacturers as $m)
-                @php
-                    $isOpen = $m->isOrderingOpen();
-                    $hasTimer = $m->session_end_at && $m->session_end_at->isFuture();
-                @endphp
-                <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-800/40 transition-colors">
-                    <td class="py-2.5 px-3.5 font-bold text-sm text-gray-900 dark:text-white">
-                        <div class="flex items-center gap-2">
-                            <span>{{ $m->name }}</span>
-                            <span class="text-[10px] text-gray-400 font-mono">({{ $m->slug }})</span>
-                        </div>
-                    </td>
-                    <td class="py-2.5 px-3.5">
-                        @if(! $m->is_ordering_active)
-                            <x-filament::badge color="danger">
-                                🛑 Ditutup Manual
-                            </x-filament::badge>
-                        @elseif($m->session_end_at && now()->gt($m->session_end_at))
-                            <x-filament::badge color="warning">
-                                ⏱️ Waktu Selesai
-                            </x-filament::badge>
-                        @elseif($hasTimer)
-                            <x-filament::badge color="success">
-                                🔥 Flash Sesi (Sisa {{ $m->session_end_at->diffForHumans(['parts' => 1, 'short' => true]) }})
-                            </x-filament::badge>
-                        @else
-                            <x-filament::badge color="success">
-                                🟢 Buka (Tanpa Batas)
-                            </x-filament::badge>
-                        @endif
-                    </td>
-                    <td class="py-2.5 px-3.5 font-mono text-[11px] text-gray-600 dark:text-gray-400">
-                        @if($m->session_end_at)
-                            {{ $m->session_end_at->format('H:i') }} WIB ({{ $m->session_end_at->format('d/m') }})
-                        @else
-                            <span class="text-gray-400 italic">Tanpa batas waktu</span>
-                        @endif
-                    </td>
-                    <td class="py-2.5 px-3.5 text-right">
-                        <div class="flex items-center justify-end gap-1.5">
-                            @if($isOpen)
-                                <button
-                                    type="button"
-                                    wire:click="extendManufacturer({{ $m->id }}, 15)"
-                                    class="px-2 py-1 text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 rounded-md border border-amber-200 dark:border-amber-800 transition-colors"
-                                    title="Tambah 15 menit ke hitung mundur"
-                                >
-                                    +15 Menit
-                                </button>
-                                <button
-                                    type="button"
-                                    wire:click="closeManufacturer({{ $m->id }})"
-                                    class="px-2 py-1 text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 rounded-md border border-rose-200 dark:border-rose-800 transition-colors"
-                                    title="Kunci / tutup sesi pemesanan pabrikan ini"
-                                >
-                                    Tutup Sesi
-                                </button>
-                            @else
-                                <button
-                                    type="button"
-                                    wire:click="openManufacturerWithDuration({{ $m->id }}, 30)"
-                                    class="px-2 py-1 text-[11px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 rounded-md border border-emerald-200 dark:border-emerald-800 transition-colors"
-                                    title="Buka sesi 30 menit"
-                                >
-                                    Buka (30m)
-                                </button>
-                                <button
-                                    type="button"
-                                    wire:click="openManufacturerUnlimited({{ $m->id }})"
-                                    class="px-2 py-1 text-[11px] font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-md border border-blue-200 dark:border-blue-800 transition-colors"
-                                    title="Buka tanpa batas waktu"
-                                >
-                                    Buka Penuh
-                                </button>
-                            @endif
-                        </div>
-                    </td>
+<div style="border: 1px solid rgba(148, 163, 184, 0.22); border-radius: 12px; overflow: hidden; background: rgba(148, 163, 184, 0.03); margin-top: 4px;">
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+            <thead>
+                <tr style="background: rgba(148, 163, 184, 0.08); border-bottom: 1px solid rgba(148, 163, 184, 0.2); color: #94a3b8; text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 0.04em;">
+                    <th style="padding: 12px 16px; width: 30%;">Pabrikan</th>
+                    <th style="padding: 12px 16px; width: 25%;">Status Sesi PO</th>
+                    <th style="padding: 12px 16px; width: 20%;">Batas Waktu Sesi</th>
+                    <th style="padding: 12px 16px; width: 25%; text-align: right;">Kontrol Cepat Sesi</th>
                 </tr>
-            @endforeach
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach($manufacturers as $m)
+                    @php
+                        $isOpen = $m->isOrderingOpen();
+                        $hasTimer = $m->session_end_at && $m->session_end_at->isFuture();
+                    @endphp
+                    <tr style="border-bottom: 1px solid rgba(148, 163, 184, 0.12); transition: background-color 0.15s ease;">
+                        <td style="padding: 12px 16px; vertical-align: middle;">
+                            <div style="font-weight: 700; font-size: 13px;">
+                                {{ $m->name }}
+                            </div>
+                            <div style="font-size: 11px; color: #94a3b8; font-family: monospace;">
+                                {{ $m->slug }}
+                            </div>
+                        </td>
+                        <td style="padding: 12px 16px; vertical-align: middle;">
+                            @if(! $m->is_ordering_active)
+                                <x-filament::badge color="danger">
+                                    🛑 Ditutup Manual
+                                </x-filament::badge>
+                            @elseif($m->session_end_at && now()->gt($m->session_end_at))
+                                <x-filament::badge color="warning">
+                                    ⏱️ Waktu Selesai
+                                </x-filament::badge>
+                            @elseif($hasTimer)
+                                <x-filament::badge color="success">
+                                    🔥 Flash Sesi (Sisa {{ $m->session_end_at->diffForHumans(['parts' => 1, 'short' => true]) }})
+                                </x-filament::badge>
+                            @else
+                                <x-filament::badge color="success">
+                                    🟢 Buka (Tanpa Batas)
+                                </x-filament::badge>
+                            @endif
+                        </td>
+                        <td style="padding: 12px 16px; vertical-align: middle; font-family: monospace; font-size: 12px;">
+                            @if($m->session_end_at)
+                                <span style="font-weight: 600;">{{ $m->session_end_at->format('H:i') }} WIB</span>
+                                <span style="color: #94a3b8; font-size: 11px;">({{ $m->session_end_at->format('d/m') }})</span>
+                            @else
+                                <span style="color: #94a3b8; font-style: italic;">Tanpa batas waktu</span>
+                            @endif
+                        </td>
+                        <td style="padding: 12px 16px; vertical-align: middle; text-align: right;">
+                            <div style="display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px;">
+                                @if($isOpen)
+                                    <x-filament::button
+                                        size="xs"
+                                        color="warning"
+                                        icon="heroicon-m-plus"
+                                        wire:click="extendManufacturer({{ $m->id }}, 15)"
+                                    >
+                                        +15 Menit
+                                    </x-filament::button>
+                                    <x-filament::button
+                                        size="xs"
+                                        color="danger"
+                                        icon="heroicon-m-lock-closed"
+                                        wire:click="closeManufacturer({{ $m->id }})"
+                                    >
+                                        Tutup Sesi
+                                    </x-filament::button>
+                                @else
+                                    <x-filament::button
+                                        size="xs"
+                                        color="success"
+                                        icon="heroicon-m-play"
+                                        wire:click="openManufacturerWithDuration({{ $m->id }}, 30)"
+                                    >
+                                        Buka (30m)
+                                    </x-filament::button>
+                                    <x-filament::button
+                                        size="xs"
+                                        color="info"
+                                        icon="heroicon-m-clock"
+                                        wire:click="openManufacturerUnlimited({{ $m->id }})"
+                                    >
+                                        Buka Penuh
+                                    </x-filament::button>
+                                @endif
+                            </div>
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
 </div>

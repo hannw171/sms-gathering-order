@@ -32,6 +32,7 @@ class GatheringTest extends TestCase
         $manufacturer = Manufacturer::create([
             'name' => 'Kalbe Farma',
             'slug' => 'kalbe-farma',
+            'is_ordering_active' => true,
         ]);
 
         $this->product = Product::create([
@@ -571,5 +572,10 @@ class GatheringTest extends TestCase
         $mfg->refresh();
         $this->assertTrue($mfg->is_ordering_active);
         $this->assertNull($mfg->session_end_at);
+
+        // 5. Close all action
+        $component->callAction('close_all_manufacturers');
+        $mfg->refresh();
+        $this->assertFalse($mfg->is_ordering_active);
     }
 }
