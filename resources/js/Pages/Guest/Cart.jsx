@@ -104,9 +104,17 @@ export default function Cart({
     const hasSucraInCart = cartItems.some(
       (item) => item.sku === 'EXE-002' || item.sku === 'EXE-003' || (item.name && item.name.toLowerCase().includes('sucra'))
     );
+    const hasNeoInCart = cartItems.some(
+      (item) => item.sku === 'GRH-019' || (item.name && item.name.toLowerCase().includes('neo protifed'))
+    );
+    const hasInterbatInCart = cartItems.some(
+      (item) =>
+        (item.manufacturer_name && item.manufacturer_name.toLowerCase().includes('interbat')) ||
+        (item.sku && item.sku.startsWith('ITB-'))
+    );
 
     const grahaNeoCount = unlockedNow.graha_neo_choice_count || 0;
-    if (grahaNeoCount > 0) {
+    if (hasNeoInCart && grahaNeoCount > 0) {
       for (let i = 1; i <= grahaNeoCount; i++) {
         list.push({
           key: grahaNeoCount > 1 ? `graha_neo_${i}` : 'graha_neo',
@@ -124,7 +132,7 @@ export default function Cart({
     }
 
     const interbatCount = unlockedNow.interbat_choice_count || 0;
-    if (interbatCount > 0) {
+    if (hasInterbatInCart && interbatCount > 0) {
       for (let i = 1; i <= interbatCount; i++) {
         list.push({
           key: interbatCount > 1 ? `interbat_${i}` : 'interbat',
