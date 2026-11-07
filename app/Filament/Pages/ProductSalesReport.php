@@ -69,7 +69,26 @@ class ProductSalesReport extends Page implements HasTable
     public function table(Table $table): Table
     {
         return $table
-            ->query(Product::query()->with('manufacturer'))
+            ->query(
+                Product::query()
+                    ->select('products.*')
+                    ->selectSub(
+                        OrderItem::join('orders', 'order_items.order_id', '=', 'orders.id')
+                            ->whereColumn('order_items.product_id', 'products.id')
+                            ->where('orders.status', '!=', 'cancelled')
+                            ->selectRaw('COALESCE(SUM(order_items.quantity), 0)'),
+                        'qty_sold'
+                    )
+                    ->selectSub(
+                        OrderItem::join('orders', 'order_items.order_id', '=', 'orders.id')
+                            ->whereColumn('order_items.product_id', 'products.id')
+                            ->where('orders.status', '!=', 'cancelled')
+                            ->selectRaw('COALESCE(SUM(order_items.subtotal), 0)'),
+                        'total_revenue'
+                    )
+                    ->with('manufacturer')
+            )
+            ->defaultSort('qty_sold', 'desc')
             ->columns([
                 TextColumn::make('sku')
                     ->label('SKU')
@@ -91,7 +110,7 @@ class ProductSalesReport extends Page implements HasTable
                     ->badge()
                     ->color('info'),
 
-                TextColumn::make('unit')
+                TextColumn::make('uom')
                     ->label('Satuan')
                     ->badge()
                     ->color('gray')
@@ -105,11 +124,6 @@ class ProductSalesReport extends Page implements HasTable
 
                 TextColumn::make('qty_sold')
                     ->label('Qty Terjual')
-                    ->state(function (Product $record): int {
-                        return (int) OrderItem::where('product_id', $record->id)
-                            ->whereHas('order', fn ($q) => $q->where('status', '!=', 'cancelled'))
-                            ->sum('quantity');
-                    })
                     ->numeric()
                     ->sortable()
                     ->alignEnd(),
@@ -117,11 +131,6 @@ class ProductSalesReport extends Page implements HasTable
                 TextColumn::make('total_revenue')
                     ->label('Total Omset')
                     ->money('IDR', locale: 'id')
-                    ->state(function (Product $record): float {
-                        return (float) OrderItem::where('product_id', $record->id)
-                            ->whereHas('order', fn ($q) => $q->where('status', '!=', 'cancelled'))
-                            ->sum('subtotal');
-                    })
                     ->sortable()
                     ->alignEnd()
                     ->weight(FontWeight::Bold),

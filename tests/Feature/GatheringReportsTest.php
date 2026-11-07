@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Filament\Pages\LeaderboardReport;
 use App\Filament\Pages\PharmacyOrdersReport;
+use App\Filament\Pages\ProductSalesReport;
 use App\Filament\Pages\RewardRecapReport;
 use App\Filament\Widgets\DashboardOverviewWidget;
 use App\Filament\Widgets\ManufacturerRevenueOverviewWidget;
@@ -196,6 +197,32 @@ class GatheringReportsTest extends TestCase
             ->assertSuccessful();
     }
 
+    public function test_product_sales_report_table_can_sort_by_qty_sold_and_total_revenue(): void
+    {
+        $this->actingAs($this->admin);
+
+        $unsoldProduct = Product::create([
+            'manufacturer_id' => $this->zenith->id,
+            'name' => 'Produk Belum Terjual',
+            'sku' => 'TEST-UNSOLD',
+            'uom' => 'Box',
+            'price' => 10000,
+            'is_active' => true,
+        ]);
+
+        // Default sort is qty_sold desc ($this->product sold 60, $unsoldProduct sold 0)
+        Livewire::test(ProductSalesReport::class)
+            ->assertCanSeeTableRecords([$this->product, $unsoldProduct], inOrder: true)
+            ->sortTable('qty_sold', 'asc')
+            ->assertCanSeeTableRecords([$unsoldProduct, $this->product], inOrder: true)
+            ->sortTable('qty_sold', 'desc')
+            ->assertCanSeeTableRecords([$this->product, $unsoldProduct], inOrder: true)
+            ->sortTable('total_revenue', 'asc')
+            ->assertCanSeeTableRecords([$unsoldProduct, $this->product], inOrder: true)
+            ->sortTable('total_revenue', 'desc')
+            ->assertCanSeeTableRecords([$this->product, $unsoldProduct], inOrder: true);
+    }
+
     public function test_revenue_stats_widget_computes_gmv(): void
     {
         $this->actingAs($this->admin);
@@ -221,6 +248,20 @@ class GatheringReportsTest extends TestCase
 
         Livewire::test(PharmacyOrdersStatsWidget::class)
             ->assertSuccessful();
+    }
+
+    public function test_pharmacy_orders_report_table_defaults_to_sorting_by_total_spending_desc(): void
+    {
+        $this->actingAs($this->admin);
+
+        $emptyPharmacy = Pharmacy::create([
+            'name' => 'Apotek Tanpa Belanja',
+            'customer_code' => 'TEST-004',
+            'city' => 'Banyumas',
+        ]);
+
+        Livewire::test(PharmacyOrdersReport::class)
+            ->assertCanSeeTableRecords([$this->pharmacy, $emptyPharmacy], inOrder: true);
     }
 
     public function test_dashboard_widgets_render_successfully(): void

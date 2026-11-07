@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Filament\Widgets\PharmacyOrdersStatsWidget;
 use App\Models\Manufacturer;
+use App\Models\Order;
 use App\Models\Pharmacy;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -78,7 +79,18 @@ class PharmacyOrdersReport extends Page implements HasTable
     {
         return $table
             ->description('Rekapitulasi apotek belanja dari pabrikan apa saja beserta breakdown item produk dan nominal transaksinya.')
-            ->query(Pharmacy::query()->with(['orders.items.product.manufacturer']))
+            ->query(
+                Pharmacy::query()
+                    ->select('pharmacies.*')
+                    ->selectSub(
+                        Order::whereColumn('orders.pharmacy_id', 'pharmacies.id')
+                            ->where('status', '!=', 'cancelled')
+                            ->selectRaw('COALESCE(SUM(total_amount), 0)'),
+                        'total_spending'
+                    )
+                    ->with(['orders.items.product.manufacturer'])
+            )
+            ->defaultSort('total_spending', 'desc')
             ->columns([
                 TextColumn::make('customer_code')
                     ->label('Kode')
@@ -120,7 +132,6 @@ class PharmacyOrdersReport extends Page implements HasTable
                 TextColumn::make('total_spending')
                     ->label('Total Belanja')
                     ->money('IDR', locale: 'id')
-                    ->state(fn (Pharmacy $record): float => (float) $record->orders->where('status', '!=', 'cancelled')->sum('total_amount'))
                     ->sortable()
                     ->alignEnd()
                     ->weight(FontWeight::Black)
