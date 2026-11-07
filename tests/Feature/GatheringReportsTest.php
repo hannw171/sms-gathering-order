@@ -52,8 +52,8 @@ class GatheringReportsTest extends TestCase
         ]);
 
         $this->zenith = Manufacturer::create([
-            'name' => 'PT. Zenith',
-            'slug' => 'zenith',
+            'name' => 'PT. Zenith & Bufa',
+            'slug' => 'zenith-bufa',
             'is_active' => true,
         ]);
 
@@ -138,6 +138,35 @@ class GatheringReportsTest extends TestCase
 
         $this->assertNull($this->pharmacy->reward_handed_over_at);
         $this->assertNull($this->pharmacy->reward_receiver_name);
+    }
+
+    public function test_reward_recap_handover_action_is_disabled_for_pharmacy_without_rewards(): void
+    {
+        $this->actingAs($this->admin);
+
+        $emptyPharmacy = Pharmacy::create([
+            'name' => 'Apotek Tanpa Hadiah',
+            'customer_code' => 'TEST-002',
+            'city' => 'Banyumas',
+        ]);
+
+        Livewire::test(RewardRecapReport::class)
+            ->assertTableActionDisabled('handover', $emptyPharmacy)
+            ->assertTableActionEnabled('handover', $this->pharmacy);
+    }
+
+    public function test_reward_recap_table_defaults_to_sorting_by_total_spending_desc(): void
+    {
+        $this->actingAs($this->admin);
+
+        $emptyPharmacy = Pharmacy::create([
+            'name' => 'Apotek Tanpa Belanja',
+            'customer_code' => 'TEST-003',
+            'city' => 'Banyumas',
+        ]);
+
+        Livewire::test(RewardRecapReport::class)
+            ->assertCanSeeTableRecords([$this->pharmacy, $emptyPharmacy], inOrder: true);
     }
 
     public function test_report_csv_export_streams_properly(): void

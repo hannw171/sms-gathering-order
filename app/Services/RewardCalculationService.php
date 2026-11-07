@@ -119,12 +119,31 @@ class RewardCalculationService
      */
     public function calculateForPharmacy(Pharmacy $pharmacy): array
     {
-        $orders = $pharmacy->orders()
-            ->where('status', '!=', 'cancelled')
-            ->with(['items.product.manufacturer'])
-            ->get();
+        if ($pharmacy->relationLoaded('orders')) {
+            $orders = $pharmacy->orders->where('status', '!=', 'cancelled');
+        } else {
+            $orders = $pharmacy->orders()
+                ->where('status', '!=', 'cancelled')
+                ->with(['items.product.manufacturer'])
+                ->get();
+        }
 
         return $this->evaluateOrders($orders);
+    }
+
+    /**
+     * Check if a pharmacy has earned any reward or voucher.
+     */
+    public function hasReward(Pharmacy $pharmacy): bool
+    {
+        $rewards = $this->calculateForPharmacy($pharmacy);
+
+        return
+            ($rewards['total_vouchers'] ?? 0) > 0 ||
+            ! empty($rewards['physical_rewards']) ||
+            ($rewards['choice_quotas']['interbat'] ?? 0) > 0 ||
+            ($rewards['choice_quotas']['graha_neo'] ?? 0) > 0 ||
+            ! empty($rewards['choice_selections']);
     }
 
     /**

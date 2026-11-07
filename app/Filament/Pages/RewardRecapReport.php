@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Widgets\RewardRecapStatsWidget;
+use App\Models\Order;
 use App\Models\Pharmacy;
 use App\Services\RewardCalculationService;
 use BackedEnum;
@@ -75,7 +76,18 @@ class RewardRecapReport extends Page implements HasTable
         $rewardService = app(RewardCalculationService::class);
 
         return $table
-            ->query(Pharmacy::query()->with(['orders.items.product.manufacturer']))
+            ->query(
+                Pharmacy::query()
+                    ->select('pharmacies.*')
+                    ->selectSub(
+                        Order::whereColumn('orders.pharmacy_id', 'pharmacies.id')
+                            ->where('status', '!=', 'cancelled')
+                            ->selectRaw('COALESCE(SUM(total_amount), 0)'),
+                        'total_spending'
+                    )
+                    ->with(['orders.items.product.manufacturer'])
+            )
+            ->defaultSort('total_spending', 'desc')
             ->columns([
                 TextColumn::make('customer_code')
                     ->label('Kode')
@@ -95,7 +107,6 @@ class RewardRecapReport extends Page implements HasTable
                 TextColumn::make('total_spending')
                     ->label('Total Belanja')
                     ->money('IDR', locale: 'id')
-                    ->state(fn (Pharmacy $record): float => (float) $record->orders->where('status', '!=', 'cancelled')->sum('total_amount'))
                     ->sortable()
                     ->alignEnd(),
 
@@ -170,10 +181,12 @@ class RewardRecapReport extends Page implements HasTable
                 Action::make('handover')
                     ->label('Serahkan')
                     ->icon('heroicon-o-gift')
-                    ->color('success')
+                    ->color(fn (Pharmacy $record): string => $rewardService->hasReward($record) ? 'success' : 'gray')
                     ->button()
                     ->size('xs')
                     ->visible(fn (Pharmacy $record): bool => is_null($record->reward_handed_over_at))
+                    ->disabled(fn (Pharmacy $record): bool => ! $rewardService->hasReward($record))
+                    ->tooltip(fn (Pharmacy $record): ?string => ! $rewardService->hasReward($record) ? 'Apotek belum memenuhi syarat hadiah/voucher' : null)
                     ->form([
                         TextInput::make('receiver_name')
                             ->label('Nama Penerima / Perwakilan Apotek')
