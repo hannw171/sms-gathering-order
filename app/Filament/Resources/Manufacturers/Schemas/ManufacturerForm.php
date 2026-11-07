@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Manufacturers\Schemas;
 
+use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
@@ -23,7 +24,17 @@ class ManufacturerForm
                     ->numeric()
                     ->default(0),
                 Toggle::make('is_active')
+                    ->label('Master Aktif')
+                    ->default(true)
                     ->required(),
+                Toggle::make('is_ordering_active')
+                    ->label('Sesi Pemesanan (PO) Aktif')
+                    ->helperText('Buka atau tutup sesi pemesanan produk untuk pabrikan ini.')
+                    ->default(true),
+                DateTimePicker::make('session_end_at')
+                    ->label('Batas Waktu Sesi (Hitung Mundur)')
+                    ->helperText('Kosongkan jika aktif tanpa batas waktu.')
+                    ->seconds(false),
             ]);
     }
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePoll } from '@inertiajs/react';
 import GuestLayout from '../../Layouts/GuestLayout';
 import { formatRupiah, formatCountdown } from '../../utils/format';
 import {
@@ -28,6 +28,18 @@ export default function Leaderboard({
   event,
 }) {
   const [countdown, setCountdown] = useState(() => formatCountdown(event?.session_end_at));
+
+  // Auto-poll leaderboard every 5 seconds for real-time ranking updates
+  usePoll(5000, {
+    only: [
+      'leaderboard',
+      'leaderboards_by_manufacturer',
+      'stats_by_manufacturer',
+      'myStandings',
+      'currentMilestone',
+      'event',
+    ],
+  });
 
   // Determine initial active tab (matches tab id: 'all' or manufacturer id)
   const resolveInitialTab = () => {
@@ -97,7 +109,7 @@ export default function Leaderboard({
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
             </span>
             <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">
-              LIVE TRACKING WIB
+              LIVE TRACKING • AUTO-UPDATE
             </span>
           </div>
 

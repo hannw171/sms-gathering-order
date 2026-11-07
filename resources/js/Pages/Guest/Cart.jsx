@@ -25,6 +25,7 @@ export default function Cart({
   milestone,
   currentRewards,
   rewardOptions,
+  manufacturers = [],
   event,
   errors,
 }) {
@@ -33,6 +34,15 @@ export default function Cart({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
+
+  const closedCartItems = useMemo(() => {
+    return cartItems.filter((item) => {
+      const m = (manufacturers || []).find(
+        (man) => man.id === item.manufacturer_id || man.name === item.manufacturer_name
+      );
+      return m && m.is_ordering_open === false;
+    });
+  }, [cartItems, manufacturers]);
 
   // Dynamic choice selections map: { [progKey]: selectedOption }
   const [selectedChoices, setSelectedChoices] = useState({
@@ -505,6 +515,19 @@ export default function Cart({
               </div>
             </div>
 
+            {/* Manufacturer Specific Closed Notice */}
+            {closedCartItems.length > 0 && (
+              <div className="bg-rose-50 border border-rose-300 rounded-2xl p-3.5 flex items-start gap-2.5 text-xs text-rose-900 shadow-xs">
+                <Lock className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block font-bold">Produk Sesi Ditutup di Keranjang</strong>
+                  <span className="text-[11px] text-rose-800 leading-snug">
+                    Terdapat {closedCartItems.length} produk dari pabrikan yang sesinya sedang ditutup oleh panitia ({closedCartItems.map((c) => c.name).join(', ')}). Harap hapus item tersebut untuk melanjutkan checkout.
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Ordering Closed / Scheduled Notice Banner */}
             {event?.is_ordering_open === false && (
               <div className="bg-amber-50 border border-amber-300 rounded-2xl p-3.5 flex items-start gap-2.5 text-xs text-amber-900 shadow-xs">
@@ -532,10 +555,15 @@ export default function Cart({
             <button
               type="button"
               onClick={() => setShowConfirmModal(true)}
-              disabled={isSubmitting || totalItems === 0 || event?.is_ordering_open === false}
+              disabled={isSubmitting || totalItems === 0 || event?.is_ordering_open === false || closedCartItems.length > 0}
               className="w-full bg-brand-600 hover:bg-brand-700 active:bg-brand-800 disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-2xl shadow-floating flex items-center justify-center gap-2 text-sm transition-all"
             >
-              {event?.is_ordering_open === false ? (
+              {closedCartItems.length > 0 ? (
+                <>
+                  <Lock className="w-4 h-4" />
+                  <span>Ada Produk Sesi Ditutup ({closedCartItems.length})</span>
+                </>
+              ) : event?.is_ordering_open === false ? (
                 <>
                   <Lock className="w-4 h-4" />
                   <span>

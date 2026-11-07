@@ -106,6 +106,8 @@ export default function Onboarding({ event, samplePharmacies }) {
     setDismissConflict(true);
     setIsDemoConflictModalOpen(false);
     setData('force_takeover', false);
+    setSelectedPharmacy(null);
+    setData('customer_code', '');
   };
 
   // Conflict modal state: either real from backend flash or simulated via demo button

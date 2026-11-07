@@ -3,9 +3,12 @@
 namespace App\Filament\Pages;
 
 use App\Models\EventSetting;
+use App\Models\Manufacturer;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -119,6 +122,15 @@ class ManageEventSettings extends Page
                                     ->seconds(false)
                                     ->helperText('Waktu hitung mundur di layar panggung dan aplikasi tamu.'),
                             ]),
+                    ]),
+
+                Section::make('Status & Durasi Sesi PO per Pabrikan')
+                    ->description('Buka atau tutup sesi pemesanan khusus untuk pabrikan tertentu, lengkap dengan batas durasi menit.')
+                    ->icon('heroicon-o-building-storefront')
+                    ->schema([
+                        Placeholder::make('manufacturer_sessions')
+                            ->hiddenLabel()
+                            ->view('filament.pages.partials.manufacturer-sessions-table'),
                     ]),
 
                 Section::make('Tampilan Layar Panggung & Pengumuman')
@@ -245,12 +257,133 @@ class ManageEventSettings extends Page
                         ->send();
                 }),
 
+            Action::make('set_manufacturer_session')
+                ->label('Atur Sesi Pabrikan')
+                ->icon('heroicon-o-adjustments-horizontal')
+                ->color('info')
+                ->form([
+                    Select::make('manufacturer_ids')
+                        ->label('Pilih Pabrikan')
+                        ->options(fn () => Manufacturer::where('is_active', true)->pluck('name', 'id'))
+                        ->multiple()
+                        ->required()
+                        ->helperText('Pilih satu atau beberapa pabrikan yang akan dibuka sesinya.'),
+                    Select::make('duration_minutes')
+                        ->label('Durasi Sesi Pemesanan')
+                        ->options([
+                            '15' => '15 Menit',
+                            '30' => '30 Menit (Direkomendasikan)',
+                            '45' => '45 Menit',
+                            '60' => '60 Menit (1 Jam)',
+                            'unlimited' => 'Tanpa Batas Waktu (Buka Penuh)',
+                        ])
+                        ->default('30')
+                        ->required(),
+                ])
+                ->action(function (array $data) {
+                    $mIds = $data['manufacturer_ids'];
+                    $endAt = $data['duration_minutes'] === 'unlimited' ? null : now()->addMinutes((int) $data['duration_minutes']);
+
+                    Manufacturer::whereIn('id', $mIds)->update([
+                        'is_ordering_active' => true,
+                        'session_end_at' => $endAt,
+                    ]);
+
+                    Notification::make()
+                        ->success()
+                        ->title('Sesi Pabrikan Berhasil Diatur!')
+                        ->body(count($mIds).' pabrikan aktif'.($endAt ? ' hingga pukul '.$endAt->format('H:i').' WIB.' : ' tanpa batas waktu.'))
+                        ->send();
+                }),
+
+            Action::make('open_all_manufacturers')
+                ->label('Buka Semua Pabrik')
+                ->icon('heroicon-o-check-circle')
+                ->color('gray')
+                ->requiresConfirmation()
+                ->modalHeading('Buka Sesi Seluruh Pabrikan?')
+                ->modalDescription('Seluruh pabrikan aktif akan dibuka pemesanannya tanpa batas waktu.')
+                ->action(function () {
+                    Manufacturer::query()->update([
+                        'is_ordering_active' => true,
+                        'session_end_at' => null,
+                    ]);
+
+                    Notification::make()
+                        ->success()
+                        ->title('Seluruh Pabrikan Telah Dibuka')
+                        ->send();
+                }),
+
             Action::make('open_stage')
                 ->label('Layar Panggung')
                 ->icon('heroicon-o-arrow-top-right-on-square')
                 ->color('gray')
                 ->url(fn (): string => route('stage.leaderboard'), shouldOpenInNewTab: true),
         ];
+    }
+
+    public function openManufacturerWithDuration(int $id, int $minutes = 30): void
+    {
+        $m = Manufacturer::findOrFail($id);
+        $endAt = now()->addMinutes($minutes);
+        $m->update([
+            'is_ordering_active' => true,
+            'session_end_at' => $endAt,
+        ]);
+
+        Notification::make()
+            ->success()
+            ->title("Sesi {$m->name} Dibuka ({$minutes} Menit)!")
+            ->body("Aktif hingga pukul {$endAt->format('H:i')} WIB.")
+            ->send();
+    }
+
+    public function openManufacturerUnlimited(int $id): void
+    {
+        $m = Manufacturer::findOrFail($id);
+        $m->update([
+            'is_ordering_active' => true,
+            'session_end_at' => null,
+        ]);
+
+        Notification::make()
+            ->success()
+            ->title("Sesi {$m->name} Dibuka Penuh")
+            ->body('Aktif tanpa batas waktu hingga ditutup manual.')
+            ->send();
+    }
+
+    public function closeManufacturer(int $id): void
+    {
+        $m = Manufacturer::findOrFail($id);
+        $m->update([
+            'is_ordering_active' => false,
+            'session_end_at' => now(),
+        ]);
+
+        Notification::make()
+            ->warning()
+            ->title("Sesi {$m->name} Ditutup")
+            ->body('Pemesanan untuk produk pabrikan ini telah dinonaktifkan.')
+            ->send();
+    }
+
+    public function extendManufacturer(int $id, int $minutes = 15): void
+    {
+        $m = Manufacturer::findOrFail($id);
+        $baseTime = ($m->session_end_at && $m->session_end_at->isFuture()) ? $m->session_end_at : now();
+        $newEnd = $baseTime->copy()->addMinutes($minutes);
+        $m->update([
+            'is_ordering_active' => true,
+            'session_end_at' => $newEnd,
+        ]);
+
+        Notification::make()
+            ->success()
+            ->title("Sesi {$m->name} Diperpanjang +{$minutes} Menit")
+            ->body("Aktif hingga pukul {$newEnd->format('H:i')} WIB.")
+            ->send();
     }
 
     public function save(): void

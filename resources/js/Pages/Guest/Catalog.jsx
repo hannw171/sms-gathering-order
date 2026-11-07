@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import GuestLayout from '../../Layouts/GuestLayout';
-import { formatRupiah } from '../../utils/format';
+import { formatRupiah, formatCountdown } from '../../utils/format';
 import { useCart } from '../../hooks/useCart';
 import QuantityStepper from '../../Components/QuantityStepper';
 import { Search, ShoppingBag, ArrowRight, Sparkles, Receipt, Trophy, Gift, Ticket, X, Clock, Lock } from 'lucide-react';
@@ -19,6 +19,19 @@ export default function Catalog({
 }) {
   const [search, setSearch] = useState(searchQuery || '');
   const { cart, totalItems, totalAmount, getItemQuantity, updateQuantity } = useCart();
+
+  const activeM = (manufacturers || []).find((m) => m.slug === selectedManufacturer);
+  const isGlobalClosed = event?.is_ordering_open === false;
+  const [mCountdown, setMCountdown] = useState(() => formatCountdown(activeM?.session_end_at));
+
+  useEffect(() => {
+    if (!activeM?.session_end_at) return;
+    setMCountdown(formatCountdown(activeM.session_end_at));
+    const timer = setInterval(() => {
+      setMCountdown(formatCountdown(activeM.session_end_at));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [activeM?.session_end_at]);
 
   const handleFilterManufacturer = (slug) => {
     router.get('/katalog', { manufacturer: slug, search }, { preserveState: true, preserveScroll: true });
@@ -217,26 +230,67 @@ export default function Catalog({
             >
               Semua Pabrik
             </button>
-            {manufacturers.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => handleFilterManufacturer(m.slug)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all shadow-xs ${
-                  selectedManufacturer === m.slug
-                    ? 'bg-brand-600 text-white shadow-sm'
-                    : 'bg-white border border-slate-200/90 text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                {m.name}
-              </button>
-            ))}
+            {manufacturers.map((m) => {
+              const isClosed = m.is_ordering_open === false;
+              const hasTimer = !isClosed && m.session_end_at;
+
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => handleFilterManufacturer(m.slug)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all shadow-xs flex items-center gap-1.5 ${
+                    selectedManufacturer === m.slug
+                      ? 'bg-brand-600 text-white shadow-sm'
+                      : 'bg-white border border-slate-200/90 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <span>{m.name}</span>
+                  {isClosed && (
+                    <span className="text-[9px] bg-rose-100 text-rose-700 px-1 py-0.2 rounded font-bold">
+                      Tutup
+                    </span>
+                  )}
+                  {hasTimer && (
+                    <span className="text-[9px] bg-amber-100 text-amber-800 px-1 py-0.2 rounded font-bold">
+                      ⚡ Flash
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
       {/* Product List */}
       <div className="px-3.5 space-y-3 pb-28">
+        {/* Active Manufacturer Specific Session Banner */}
+        {activeM && activeM.is_ordering_open === false && (
+          <div className="bg-rose-50 border border-rose-200/90 rounded-2xl p-3 flex items-center gap-2.5 text-xs text-rose-900 shadow-xs mb-3">
+            <Lock className="w-4 h-4 text-rose-600 shrink-0" />
+            <span className="text-[11px] font-medium leading-tight">
+              {activeM.ordering_status === 'ended'
+                ? `Sesi pemesanan untuk ${activeM.name} telah berakhir.`
+                : `Sesi pemesanan untuk ${activeM.name} sedang ditutup sementara oleh panitia.`}
+            </span>
+          </div>
+        )}
+
+        {activeM && activeM.is_ordering_open && activeM.session_end_at && (
+          <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white rounded-2xl p-3 flex items-center justify-between shadow-sm mb-3">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-amber-200" />
+              <span className="text-xs font-bold uppercase tracking-wider">
+                Flash Sesi {activeM.name}
+              </span>
+            </div>
+            <div className="text-xs font-black font-mono bg-black/20 px-2.5 py-1 rounded-lg">
+              Sisa {mCountdown}
+            </div>
+          </div>
+        )}
+
         {products.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 text-center border border-slate-200/80 my-4 shadow-sm">
             <ShoppingBag className="w-12 h-12 text-slate-300 mx-auto mb-2" />
@@ -248,6 +302,8 @@ export default function Catalog({
         ) : (
           products.map((product) => {
             const qty = getItemQuantity(product.id);
+            const isMClosed = product.manufacturer && product.manufacturer.is_ordering_open === false;
+            const isProductOrderDisabled = isGlobalClosed || isMClosed;
 
             return (
               <div
@@ -281,13 +337,19 @@ export default function Catalog({
                     </span>
                   </div>
 
-                  {/* Quantity Stepper with Manual Input (Figma node 1:440) */}
-                  <QuantityStepper
-                    value={qty}
-                    onChange={(newQty) => updateQuantity(product, newQty)}
-                    min={0}
-                    max={9999}
-                  />
+                  {/* Quantity Stepper or Closed Badge */}
+                  {isProductOrderDisabled ? (
+                    <span className="text-[11px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-xl">
+                      Sesi PO Ditutup
+                    </span>
+                  ) : (
+                    <QuantityStepper
+                      value={qty}
+                      onChange={(newQty) => updateQuantity(product, newQty)}
+                      min={0}
+                      max={9999}
+                    />
+                  )}
                 </div>
               </div>
             );

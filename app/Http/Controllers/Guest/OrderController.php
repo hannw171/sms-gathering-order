@@ -50,6 +50,7 @@ class OrderController extends Controller
                 'exeltis_lanso' => RewardCalculationService::EXELTIS_LANSO_TIERS,
                 'exeltis_sucra' => RewardCalculationService::EXELTIS_SUCRA_TIERS,
             ],
+            'manufacturers' => Manufacturer::where('is_active', true)->get(),
             'event' => [
                 'name' => $eventSetting->event_name,
                 'session_start_at' => $eventSetting->session_start_at,
@@ -89,6 +90,20 @@ class OrderController extends Controller
             'notes' => ['nullable', 'string', 'max:500'],
             'reward_selections' => ['nullable', 'array'],
         ]);
+
+        // Validate manufacturer-specific session availability
+        foreach ($request->items as $item) {
+            $product = Product::with('manufacturer')->findOrFail($item['product_id']);
+            if ($product->manufacturer && ! $product->manufacturer->isOrderingOpen()) {
+                $mStatus = $product->manufacturer->getOrderingStatus();
+                $mName = $product->manufacturer->name;
+                $msg = $mStatus === 'ended'
+                    ? "Sesi pemesanan untuk pabrikan {$mName} telah berakhir."
+                    : "Sesi pemesanan untuk pabrikan {$mName} sedang ditutup oleh panitia.";
+
+                return back()->withErrors(['error' => $msg]);
+            }
+        }
 
         $order = DB::transaction(function () use ($request, $pharmacy) {
             $totalAmount = 0;

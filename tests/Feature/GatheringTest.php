@@ -478,4 +478,98 @@ class GatheringTest extends TestCase
         $response->assertSessionHasErrors('error');
         $this->assertEquals(0, Order::count());
     }
+
+    public function test_checkout_is_blocked_when_product_manufacturer_session_is_closed(): void
+    {
+        // General event session is open
+        EventSetting::current()->update([
+            'is_ordering_active' => true,
+            'session_start_at' => now()->subHour(),
+            'session_end_at' => now()->addHour(),
+        ]);
+
+        // Manufacturer session is closed
+        $this->product->manufacturer->update([
+            'is_ordering_active' => false,
+        ]);
+
+        $response = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->post('/checkout', [
+                'items' => [
+                    [
+                        'product_id' => $this->product->id,
+                        'quantity' => 1,
+                    ],
+                ],
+            ]);
+
+        $response->assertSessionHasErrors('error');
+        $this->assertEquals(0, Order::count());
+    }
+
+    public function test_checkout_is_blocked_when_product_manufacturer_session_expired(): void
+    {
+        // General event session is open
+        EventSetting::current()->update([
+            'is_ordering_active' => true,
+            'session_start_at' => now()->subHour(),
+            'session_end_at' => now()->addHour(),
+        ]);
+
+        // Manufacturer session ended in the past
+        $this->product->manufacturer->update([
+            'is_ordering_active' => true,
+            'session_end_at' => now()->subMinutes(5),
+        ]);
+
+        $response = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->post('/checkout', [
+                'items' => [
+                    [
+                        'product_id' => $this->product->id,
+                        'quantity' => 1,
+                    ],
+                ],
+            ]);
+
+        $response->assertSessionHasErrors('error');
+        $this->assertEquals(0, Order::count());
+    }
+
+    public function test_admin_can_manage_manufacturer_sessions_in_event_settings(): void
+    {
+        $admin = User::factory()->create([
+            'email' => 'admin_test_mfg@example.com',
+        ]);
+
+        $mfg = $this->product->manufacturer;
+        $mfg->update(['is_ordering_active' => false, 'session_end_at' => null]);
+
+        $component = Livewire::actingAs($admin)
+            ->test(ManageEventSettings::class);
+
+        // 1. Open with duration 30 minutes
+        $component->call('openManufacturerWithDuration', $mfg->id, 30);
+        $mfg->refresh();
+        $this->assertTrue($mfg->is_ordering_active);
+        $this->assertNotNull($mfg->session_end_at);
+        $this->assertTrue($mfg->session_end_at->gt(now()->addMinutes(25)));
+
+        // 2. Extend by 15 minutes
+        $oldEnd = $mfg->session_end_at;
+        $component->call('extendManufacturer', $mfg->id, 15);
+        $mfg->refresh();
+        $this->assertTrue($mfg->session_end_at->gt($oldEnd));
+
+        // 3. Close manufacturer
+        $component->call('closeManufacturer', $mfg->id);
+        $mfg->refresh();
+        $this->assertFalse($mfg->is_ordering_active);
+
+        // 4. Open unlimited
+        $component->call('openManufacturerUnlimited', $mfg->id);
+        $mfg->refresh();
+        $this->assertTrue($mfg->is_ordering_active);
+        $this->assertNull($mfg->session_end_at);
+    }
 }
