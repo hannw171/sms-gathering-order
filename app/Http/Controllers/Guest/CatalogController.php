@@ -36,8 +36,18 @@ class CatalogController extends Controller
         }
 
         $manufacturers = Manufacturer::where('is_active', true)
-            ->orderBy('sort_order', 'asc')
-            ->get();
+            ->get()
+            ->sort(function ($a, $b) {
+                $aOpen = $a->isOrderingOpen() ? 1 : 0;
+                $bOpen = $b->isOrderingOpen() ? 1 : 0;
+
+                if ($aOpen !== $bOpen) {
+                    return $bOpen <=> $aOpen;
+                }
+
+                return ($a->sort_order ?? 0) <=> ($b->sort_order ?? 0) ?: strcmp($a->name, $b->name);
+            })
+            ->values();
 
         $query = Product::with('manufacturer')
             ->where('is_active', true);

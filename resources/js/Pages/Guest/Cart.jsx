@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePoll } from '@inertiajs/react';
 import axios from 'axios';
 import GuestLayout from '../../Layouts/GuestLayout';
 import { formatRupiah } from '../../utils/format';
@@ -29,6 +29,11 @@ export default function Cart({
   event,
   errors,
 }) {
+  // Auto-poll cart every 4 seconds to sync manufacturer session state in real-time
+  usePoll(4000, {
+    only: ['manufacturers', 'event'],
+  });
+
   const { cartItems, totalItems, totalAmount, updateQuantity, removeItem, clearCart } = useCart();
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);

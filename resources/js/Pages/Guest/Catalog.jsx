@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Head, Link, router, usePoll } from '@inertiajs/react';
 import GuestLayout from '../../Layouts/GuestLayout';
 import { formatRupiah, formatCountdown } from '../../utils/format';
 import { useCart } from '../../hooks/useCart';
@@ -20,8 +20,41 @@ export default function Catalog({
   const [search, setSearch] = useState(searchQuery || '');
   const { cart, totalItems, totalAmount, getItemQuantity, updateQuantity } = useCart();
 
+  // Auto-poll catalog every 4 seconds for real-time manufacturer session updates
+  usePoll(4000, {
+    only: [
+      'manufacturers',
+      'products',
+      'event',
+      'milestone',
+      'currentRewards',
+      'ordersCount',
+    ],
+  });
+
+  const isManufacturerOpen = (m) => {
+    if (!m) return false;
+    if (m.is_ordering_active === false) return false;
+    if (m.session_end_at && new Date(m.session_end_at).getTime() <= Date.now()) return false;
+    return m.is_ordering_open !== false;
+  };
+
+  // Sort manufacturers: Open (ON) sessions first, then closed (OFF), preserving sort order within groups
+  const sortedManufacturers = useMemo(() => {
+    return [...(manufacturers || [])].sort((a, b) => {
+      const aOpen = isManufacturerOpen(a) ? 1 : 0;
+      const bOpen = isManufacturerOpen(b) ? 1 : 0;
+
+      if (aOpen !== bOpen) {
+        return bOpen - aOpen; // 1 (ON) comes before 0 (OFF)
+      }
+
+      return (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.name.localeCompare(b.name);
+    });
+  }, [manufacturers]);
+
   const activeM = (manufacturers || []).find((m) => m.slug === selectedManufacturer);
-  const hasAnyOpenManufacturer = (manufacturers || []).some((m) => m.is_ordering_open);
+  const hasAnyOpenManufacturer = (manufacturers || []).some((m) => isManufacturerOpen(m));
   const [mCountdown, setMCountdown] = useState(() => formatCountdown(activeM?.session_end_at));
 
   useEffect(() => {
@@ -230,9 +263,10 @@ export default function Catalog({
             >
               Semua Pabrik
             </button>
-            {manufacturers.map((m) => {
-              const isClosed = m.is_ordering_open === false;
-              const hasTimer = !isClosed && m.session_end_at;
+            {sortedManufacturers.map((m) => {
+              const isOpen = isManufacturerOpen(m);
+              const isClosed = !isOpen;
+              const hasTimer = isOpen && m.session_end_at;
 
               return (
                 <button
@@ -266,7 +300,7 @@ export default function Catalog({
       {/* Product List */}
       <div className="px-3.5 space-y-3 pb-28">
         {/* Active Manufacturer Specific Session Banner */}
-        {activeM && activeM.is_ordering_open === false && (
+        {activeM && !isManufacturerOpen(activeM) && (
           <div className="bg-rose-50 border border-rose-200/90 rounded-2xl p-3 flex items-center gap-2.5 text-xs text-rose-900 shadow-xs mb-3">
             <Lock className="w-4 h-4 text-rose-600 shrink-0" />
             <span className="text-[11px] font-medium leading-tight">
@@ -277,7 +311,7 @@ export default function Catalog({
           </div>
         )}
 
-        {activeM && activeM.is_ordering_open && activeM.session_end_at && (
+        {activeM && isManufacturerOpen(activeM) && activeM.session_end_at && (
           <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white rounded-2xl p-3 flex items-center justify-between shadow-sm mb-3">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-amber-200" />
@@ -302,7 +336,7 @@ export default function Catalog({
         ) : (
           products.map((product) => {
             const qty = getItemQuantity(product.id);
-            const isProductOrderDisabled = product.manufacturer ? product.manufacturer.is_ordering_open === false : false;
+            const isProductOrderDisabled = !isManufacturerOpen(product.manufacturer);
 
             return (
               <div

@@ -90,6 +90,34 @@ class GatheringTest extends TestCase
         $response->assertInertia(fn ($page) => $page->component('Guest/Catalog'));
     }
 
+    public function test_catalog_orders_manufacturers_with_open_sessions_first(): void
+    {
+        // First manufacturer is closed
+        $this->product->manufacturer->update([
+            'is_ordering_active' => false,
+            'sort_order' => 1,
+        ]);
+
+        // Second manufacturer is open
+        $openM = Manufacturer::create([
+            'name' => 'Open Pharma',
+            'slug' => 'open-pharma',
+            'is_active' => true,
+            'is_ordering_active' => true,
+            'sort_order' => 2,
+        ]);
+
+        $response = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->get('/katalog');
+
+        $response->assertStatus(200);
+        $response->assertInertia(function ($page) use ($openM) {
+            $page->component('Guest/Catalog');
+            $manufacturers = $page->toArray()['props']['manufacturers'];
+            $this->assertEquals($openM->id, $manufacturers[0]['id']);
+        });
+    }
+
     public function test_guest_can_view_leaderboard_page(): void
     {
         $response = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
