@@ -95,6 +95,9 @@ class CatalogController extends Controller
                 'is_ordering_active' => $eventSetting->is_ordering_active,
                 'is_ordering_open' => $eventSetting->isOrderingOpen(),
                 'ordering_status' => $eventSetting->getOrderingStatus(),
+                'is_leaderboard_visible' => (bool) $eventSetting->is_leaderboard_visible,
+                'doorprize_announcement' => $eventSetting->doorprize_announcement,
+                'running_ticker_text' => $eventSetting->running_ticker_text,
             ],
         ]);
     }

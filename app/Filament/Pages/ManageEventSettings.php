@@ -111,18 +111,21 @@ class ManageEventSettings extends Page
                     ]),
 
                 Section::make('Tampilan Layar Panggung & Pengumuman')
-                    ->description('Atur teks pengumuman doorprize dan teks berjalan yang tampil di layar proyektor panggung.')
+                    ->description('Atur teks pengumuman doorprize dan teks berjalan yang tampil di layar proyektor panggung dan tamu.')
                     ->icon('heroicon-o-tv')
                     ->collapsible()
                     ->schema([
                         Toggle::make('is_leaderboard_visible')
-                            ->label('Tampilkan Papan Peringkat Live di Panggung')
+                            ->label('Tampilkan Papan Peringkat Live (Panggung & Tamu)')
+                            ->helperText('Jika dinonaktifkan, peringkat disembunyikan sementara dari layar panggung & tamu (misal menjelang pengumuman pemenang).')
                             ->default(true),
                         TextInput::make('doorprize_announcement')
-                            ->label('Teks Pengumuman Doorprize')
+                            ->label('Teks Pengumuman Doorprize (Opsional)')
+                            ->helperText('Kosongkan jika hanya ingin menampilkan Running Ticker tanpa kartu pengumuman doorprize.')
                             ->placeholder('Contoh: DOORPRIZE EXCLUSIVE: Grand Prize Emas Logam Mulia & Paket Liburan'),
                         Textarea::make('running_ticker_text')
-                            ->label('Teks Berjalan di Bawah Layar Panggung (Running Ticker)')
+                            ->label('Teks Berjalan (Running Ticker)')
+                            ->helperText('Teks berjalan yang tampil di layar panggung dan halaman live tracking tamu. Kosongkan jika tidak ingin menampilkan teks berjalan.')
                             ->rows(3)
                             ->placeholder('Teks berjalan realtime di bagian bawah layar proyektor...'),
                     ]),

@@ -4,7 +4,7 @@ import GuestLayout from '../../Layouts/GuestLayout';
 import { formatRupiah, formatCountdown } from '../../utils/format';
 import { useCart } from '../../hooks/useCart';
 import QuantityStepper from '../../Components/QuantityStepper';
-import { Search, ShoppingBag, ArrowRight, Sparkles, Receipt, Trophy, Gift, Ticket, X, Clock, Lock } from 'lucide-react';
+import { Search, ShoppingBag, ArrowRight, Sparkles, Receipt, Trophy, Gift, Ticket, X, Clock, Lock, Flame } from 'lucide-react';
 
 export default function Catalog({
   pharmacy,
@@ -214,6 +214,23 @@ export default function Catalog({
               ? 'Sesi Pemesanan gathering telah berakhir.'
               : 'Sesi Pemesanan sedang ditutup sementara oleh panitia. Menunggu sesi pabrikan dibuka.'}
           </span>
+        </div>
+      )}
+
+      {/* Running Marquee Ticker on Guest Catalog (jika diisi) */}
+      {Boolean(event?.running_ticker_text?.trim()) && (
+        <div className="mx-3.5 mb-2.5">
+          <div className="bg-white border border-slate-200/90 rounded-2xl py-2 px-3.5 shadow-xs flex items-center gap-2.5 overflow-hidden">
+            <div className="flex items-center gap-1 shrink-0 bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-2xs">
+              <Flame className="w-3 h-3 fill-slate-950" />
+              <span>INFO</span>
+            </div>
+            <div className="overflow-hidden whitespace-nowrap flex-1">
+              <p className="text-xs font-semibold text-slate-700 inline-block animate-marquee tracking-wide">
+                {event.running_ticker_text}
+              </p>
+            </div>
+          </div>
         </div>
       )}
 

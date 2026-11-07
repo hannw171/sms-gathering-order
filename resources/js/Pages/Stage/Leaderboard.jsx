@@ -374,120 +374,140 @@ export default function StageLeaderboard({
       </section>
 
       {/* ========================================================================= */}
-      {/* 3. MAIN AREA: TOP 3 GRAND PODIUM (~60% HEIGHT)                             */}
+      {/* 3 & 4. MAIN & LOWER AREA: PODIUM & GRID (OR STANDBY IF HIDDEN)            */}
       {/* ========================================================================= */}
-      <section className="relative z-10 flex-1 flex flex-col justify-center my-auto pt-3 pb-1">
-        {/* Stage Subtitle - Prominent & Highly Legible from Medium-Far Distance */}
-        <div className="text-center mb-4 lg:mb-5">
-          <div className="inline-flex items-center gap-2.5 lg:gap-3 bg-white/95 backdrop-blur-md px-6 lg:px-8 py-2 lg:py-2.5 rounded-2xl border-2 border-amber-300/90 shadow-sm">
-            <Sparkles className="w-5 h-5 lg:w-6 lg:h-6 text-amber-500 shrink-0" />
-            <h2 className="text-base lg:text-2xl font-black text-slate-900 uppercase tracking-wider">
-              {activeTab === 'all'
-                ? 'PODIUM JUARA UTAMA (SEMUA PABRIKAN)'
-                : `PODIUM JUARA: ${currentTabObj.name.toUpperCase()}`}
-            </h2>
-            <Sparkles className="w-5 h-5 lg:w-6 lg:h-6 text-amber-500 shrink-0" />
+      {event?.is_leaderboard_visible === false ? (
+        <section className="relative z-10 flex-1 flex flex-col items-center justify-center my-auto p-12 text-center bg-white/80 backdrop-blur-md rounded-3xl border border-slate-200/80 shadow-md">
+          <div className="w-24 h-24 rounded-3xl bg-amber-100 flex items-center justify-center text-amber-600 mb-5 shadow-inner animate-pulse">
+            <Trophy className="w-12 h-12" />
           </div>
-        </div>
-
-        {/* 3-Column Centered Podium with Equal Widths & Relative Sizing */}
-        <div className="max-w-6xl mx-auto w-full grid grid-cols-3 gap-3 md:gap-5 lg:gap-8 items-end px-2">
-          {/* -------------------- PODIUM #2 (SILVER - KIRI) -------------------- */}
-          <PodiumCard
-            rank={2}
-            item={top2}
-            categoryName={currentTabObj.name}
-          />
-
-          {/* -------------------- PODIUM #1 (GOLD - TENGAH ELEVATED) -------------------- */}
-          <PodiumCard
-            rank={1}
-            item={top1}
-            categoryName={currentTabObj.name}
-          />
-
-          {/* -------------------- PODIUM #3 (BRONZE - KANAN) -------------------- */}
-          <PodiumCard
-            rank={3}
-            item={top3}
-            categoryName={currentTabObj.name}
-          />
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 4. LOWER AREA: PERINGKAT 4 — 10 HORIZONTAL GRID (~35% HEIGHT)            */}
-      {/* ========================================================================= */}
-      <section className="relative z-10 bg-white border border-slate-200/90 rounded-3xl p-3.5 lg:p-4 shadow-sm mb-2.5">
-        <div className="flex items-center justify-between mb-2.5 px-1 border-b border-slate-100 pb-2">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-emerald-600" />
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
-              PERINGKAT 4 SAMPAI 10 &bull; {currentTabObj.name.toUpperCase()}
-            </span>
-          </div>
-          <span className="text-[10px] text-brand-700 bg-brand-50 border border-brand-200 px-2.5 py-0.5 rounded-full font-semibold">
-            Live Leaderboard
-          </span>
-        </div>
-
-        {/* 7 Columns Horizontal Row */}
-        {rank4to10.length === 0 ? (
-          <p className="text-xs text-slate-400 text-center py-4">
-            Belum ada data transaksi di peringkat 4–10 untuk kategori ini.
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2">
+            Papan Peringkat Ditutup Sementara
+          </h2>
+          <p className="text-base font-semibold text-slate-600 max-w-lg mb-4">
+            Panitia sedang merekapitulasi total perolehan transaksi dan penentuan pemenang doorprize & grand prize.
           </p>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 lg:gap-2.5">
-            {rank4to10.map((item) => (
-              <div
-                key={item.id}
-                className="bg-slate-50/80 hover:bg-brand-50/50 border border-slate-200/80 hover:border-brand-300 rounded-2xl p-2.5 flex flex-col justify-between transition-all shadow-2xs"
-              >
-                <div className="flex items-center justify-between gap-1 mb-1">
-                  <span className="w-6 h-6 rounded-lg bg-white text-slate-700 font-black text-xs flex items-center justify-center shrink-0 border border-slate-200 shadow-2xs">
-                    #{item.rank}
-                  </span>
-                  <span className="text-[10px] text-slate-400 truncate">
-                    {item.city || 'Jawa Tengah'}
-                  </span>
-                </div>
-
-                <h4 className="text-xs font-bold text-slate-900 truncate my-0.5" title={item.name}>
-                  {item.name}
-                </h4>
-
-                <div className="pt-1.5 border-t border-slate-200/60 mt-1">
-                  <span className="text-xs font-black text-brand-700 font-mono block truncate">
-                    {formatRupiah(item.total_spending)}
-                  </span>
-                </div>
-              </div>
-            ))}
+          <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-300 text-amber-900 px-5 py-2.5 rounded-2xl text-sm font-bold shadow-xs">
+            <Sparkles className="w-4 h-4 text-amber-600" />
+            <span>Pemenang akan segera diumumkan di atas panggung</span>
           </div>
-        )}
+        </section>
+      ) : (
+        <>
+          {/* Main Area: Top 3 Grand Podium */}
+          <section className="relative z-10 flex-1 flex flex-col justify-center my-auto pt-3 pb-1">
+            {/* Stage Subtitle - Prominent & Highly Legible from Medium-Far Distance */}
+            <div className="text-center mb-4 lg:mb-5">
+              <div className="inline-flex items-center gap-2.5 lg:gap-3 bg-white/95 backdrop-blur-md px-6 lg:px-8 py-2 lg:py-2.5 rounded-2xl border-2 border-amber-300/90 shadow-sm">
+                <Sparkles className="w-5 h-5 lg:w-6 lg:h-6 text-amber-500 shrink-0" />
+                <h2 className="text-base lg:text-2xl font-black text-slate-900 uppercase tracking-wider">
+                  {activeTab === 'all'
+                    ? 'PODIUM JUARA UTAMA (SEMUA PABRIKAN)'
+                    : `PODIUM JUARA: ${currentTabObj.name.toUpperCase()}`}
+                </h2>
+                <Sparkles className="w-5 h-5 lg:w-6 lg:h-6 text-amber-500 shrink-0" />
+              </div>
+            </div>
 
-        {/* Tie-breaker footnote */}
-        <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
-          <span>* Peringkat ditentukan akumulasi transaksi valid; jika nominal sama, ditentukan waktu pesanan lebih awal.</span>
-          <span>PT. Satria Medika Sejahtera</span>
-        </div>
-      </section>
+            {/* 3-Column Centered Podium with Equal Widths & Relative Sizing */}
+            <div className="max-w-6xl mx-auto w-full grid grid-cols-3 gap-3 md:gap-5 lg:gap-8 items-end px-2">
+              {/* -------------------- PODIUM #2 (SILVER - KIRI) -------------------- */}
+              <PodiumCard
+                rank={2}
+                item={top2}
+                categoryName={currentTabObj.name}
+              />
+
+              {/* -------------------- PODIUM #1 (GOLD - TENGAH ELEVATED) -------------------- */}
+              <PodiumCard
+                rank={1}
+                item={top1}
+                categoryName={currentTabObj.name}
+              />
+
+              {/* -------------------- PODIUM #3 (BRONZE - KANAN) -------------------- */}
+              <PodiumCard
+                rank={3}
+                item={top3}
+                categoryName={currentTabObj.name}
+              />
+            </div>
+          </section>
+
+          {/* Lower Area: Peringkat 4 — 10 Horizontal Grid */}
+          <section className="relative z-10 bg-white border border-slate-200/90 rounded-3xl p-3.5 lg:p-4 shadow-sm mb-2.5">
+            <div className="flex items-center justify-between mb-2.5 px-1 border-b border-slate-100 pb-2">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-emerald-600" />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                  PERINGKAT 4 SAMPAI 10 &bull; {currentTabObj.name.toUpperCase()}
+                </span>
+              </div>
+              <span className="text-[10px] text-brand-700 bg-brand-50 border border-brand-200 px-2.5 py-0.5 rounded-full font-semibold">
+                Live Leaderboard
+              </span>
+            </div>
+
+            {/* 7 Columns Horizontal Row */}
+            {rank4to10.length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-4">
+                Belum ada data transaksi di peringkat 4–10 untuk kategori ini.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 lg:gap-2.5">
+                {rank4to10.map((item) => (
+                  <div
+                    key={item.id}
+                    className="bg-slate-50/80 hover:bg-brand-50/50 border border-slate-200/80 hover:border-brand-300 rounded-2xl p-2.5 flex flex-col justify-between transition-all shadow-2xs"
+                  >
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <span className="w-6 h-6 rounded-lg bg-white text-slate-700 font-black text-xs flex items-center justify-center shrink-0 border border-slate-200 shadow-2xs">
+                        #{item.rank}
+                      </span>
+                      <span className="text-[10px] text-slate-400 truncate">
+                        {item.city || 'Jawa Tengah'}
+                      </span>
+                    </div>
+
+                    <h4 className="text-xs font-bold text-slate-900 truncate my-0.5" title={item.name}>
+                      {item.name}
+                    </h4>
+
+                    <div className="pt-1.5 border-t border-slate-200/60 mt-1">
+                      <span className="text-xs font-black text-brand-700 font-mono block truncate">
+                        {formatRupiah(item.total_spending)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Tie-breaker footnote */}
+            <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+              <span>* Peringkat ditentukan akumulasi transaksi valid; jika nominal sama, ditentukan waktu pesanan lebih awal.</span>
+              <span>PT. Satria Medika Sejahtera</span>
+            </div>
+          </section>
+        </>
+      )}
 
       {/* ========================================================================= */}
       {/* 5. BOTTOM RUNNING MARQUEE TICKER                                          */}
       {/* ========================================================================= */}
-      <footer className="relative z-10 bg-white border border-slate-200/90 rounded-2xl py-2 px-4 shadow-sm flex items-center gap-3 overflow-hidden">
-        <div className="flex items-center gap-1.5 shrink-0 bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 px-2.5 py-1 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-2xs">
-          <Flame className="w-3.5 h-3.5 fill-slate-950" />
-          <span>PENGUMUMAN</span>
-        </div>
-        <div className="overflow-hidden whitespace-nowrap flex-1">
-          <p className="text-xs font-semibold text-slate-700 inline-block animate-marquee tracking-wide">
-            {event?.running_ticker_text ||
-              '🔥 Flash Deal Sesi PO Gathering SMS Sedang Berlangsung! Kumpulkan Order Sebanyak-banyaknya untuk Memenangkan Grand Prize Most Spender Malam Ini!'}
-          </p>
-        </div>
-      </footer>
+      {Boolean(event?.running_ticker_text?.trim()) && (
+        <footer className="relative z-10 bg-white border border-slate-200/90 rounded-2xl py-2 px-4 shadow-sm flex items-center gap-3 overflow-hidden">
+          <div className="flex items-center gap-1.5 shrink-0 bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 px-2.5 py-1 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-2xs">
+            <Flame className="w-3.5 h-3.5 fill-slate-950" />
+            <span>PENGUMUMAN</span>
+          </div>
+          <div className="overflow-hidden whitespace-nowrap flex-1">
+            <p className="text-xs font-semibold text-slate-700 inline-block animate-marquee tracking-wide">
+              {event.running_ticker_text}
+            </p>
+          </div>
+        </footer>
+      )}
     </div>
   );
 }

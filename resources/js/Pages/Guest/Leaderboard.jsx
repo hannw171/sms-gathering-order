@@ -14,6 +14,7 @@ import {
   ShoppingBag,
   Layers,
   ChevronRight,
+  Flame,
 } from 'lucide-react';
 
 export default function Leaderboard({
@@ -212,24 +213,43 @@ export default function Leaderboard({
         </div>
       </div>
 
-      {/* Grand Prize Announcement Banner (Figma node 1:2115) */}
-      <div className="px-3.5 mb-3.5">
-        <div className="bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800 text-white rounded-2xl p-4 shadow-md relative overflow-hidden flex items-center gap-3.5">
-          <div className="absolute top-0 right-0 -mr-6 -mt-6 w-32 h-32 bg-amber-400/20 rounded-full blur-2xl pointer-events-none" />
+      {/* Grand Prize Announcement Banner (Figma node 1:2115) - Hanya muncul jika diisi */}
+      {Boolean(event?.doorprize_announcement?.trim()) && (
+        <div className="px-3.5 mb-3.5">
+          <div className="bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800 text-white rounded-2xl p-4 shadow-md relative overflow-hidden flex items-center gap-3.5">
+            <div className="absolute top-0 right-0 -mr-6 -mt-6 w-32 h-32 bg-amber-400/20 rounded-full blur-2xl pointer-events-none" />
 
-          <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-amber-300 flex items-center justify-center shrink-0 shadow-sm relative z-10">
-            <Gift className="w-5 h-5 text-amber-300" />
-          </div>
-          <div className="flex-1 min-w-0 relative z-10">
-            <div className="inline-block bg-amber-400/20 text-amber-200 border border-amber-300/30 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mb-1">
-              DOORPRIZE EXCLUSIVE
+            <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-amber-300 flex items-center justify-center shrink-0 shadow-sm relative z-10">
+              <Gift className="w-5 h-5 text-amber-300" />
             </div>
-            <p className="text-xs font-semibold text-white truncate">
-              {event?.doorprize_announcement || 'Grand Prize Emas & Paket Liburan'}
-            </p>
+            <div className="flex-1 min-w-0 relative z-10">
+              <div className="inline-block bg-amber-400/20 text-amber-200 border border-amber-300/30 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mb-1">
+                DOORPRIZE EXCLUSIVE
+              </div>
+              <p className="text-xs font-semibold text-white truncate">
+                {event.doorprize_announcement}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Running Marquee Ticker on Guest (jika diisi) */}
+      {Boolean(event?.running_ticker_text?.trim()) && (
+        <div className="px-3.5 mb-3.5">
+          <div className="bg-white border border-slate-200/90 rounded-2xl py-2 px-3.5 shadow-xs flex items-center gap-2.5 overflow-hidden">
+            <div className="flex items-center gap-1 shrink-0 bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-2xs">
+              <Flame className="w-3 h-3 fill-slate-950" />
+              <span>INFO</span>
+            </div>
+            <div className="overflow-hidden whitespace-nowrap flex-1">
+              <p className="text-xs font-semibold text-slate-700 inline-block animate-marquee tracking-wide">
+                {event.running_ticker_text}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Ringkasan Standing Apotek Anda (Multi-Kategori) */}
       {currentPharmacy && myStandings && (
@@ -364,7 +384,24 @@ export default function Leaderboard({
         </div>
       </div>
 
-      {/* Top 3 Podium Area */}
+      {/* Tampilan Papan Peringkat atau Pesan Ditutup Sementara */}
+      {event?.is_leaderboard_visible === false ? (
+        <div className="px-3.5 mb-6">
+          <div className="bg-white rounded-2xl p-7 text-center border border-slate-200/90 shadow-sm my-3">
+            <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto mb-3 shadow-xs">
+              <Trophy className="w-8 h-8" />
+            </div>
+            <h4 className="font-bold text-base text-slate-900 mb-1">
+              Papan Peringkat Ditutup Sementara
+            </h4>
+            <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+              Panitia sedang merekapitulasi perolehan poin dan penentuan pemenang doorprize & grand prize. Tetap pantau pengumuman di panggung!
+            </p>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Top 3 Podium Area */}
       <div className="px-3.5 mb-5">
         <div className="flex items-center justify-between mb-2.5">
           <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -557,6 +594,8 @@ export default function Leaderboard({
           )}
         </div>
       )}
+        </>
+      )}
 
       {/* Sticky Bottom My Rank Highlight */}
       {currentPharmacy && (
@@ -564,13 +603,15 @@ export default function Leaderboard({
           <div className="bg-brand-900/95 backdrop-blur-md text-white p-3.5 px-4 rounded-2xl shadow-floating flex items-center justify-between border border-brand-700/50">
             <div className="flex items-center gap-3 min-w-0 pr-2">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-400 to-amber-300 text-slate-950 font-black text-xs flex items-center justify-center shadow-sm shrink-0">
-                {currentMyRank ? `#${currentMyRank}` : '-'}
+                {event?.is_leaderboard_visible === false ? '🔒' : (currentMyRank ? `#${currentMyRank}` : '-')}
               </div>
               <div className="min-w-0">
                 <span className="text-[10px] text-brand-200 block uppercase font-bold tracking-wider truncate">
-                  {activeTab === 'all'
-                    ? 'Posisi Apotek Anda (Overall):'
-                    : `Posisi di ${activeTabObj.name}:`}
+                  {event?.is_leaderboard_visible === false
+                    ? 'Peringkat Disembunyikan Panitia'
+                    : (activeTab === 'all'
+                      ? 'Posisi Apotek Anda (Overall):'
+                      : `Posisi di ${activeTabObj.name}:`)}
                 </span>
                 <span className="text-xs font-bold text-white truncate max-w-[170px] block">
                   {currentPharmacy.name}
