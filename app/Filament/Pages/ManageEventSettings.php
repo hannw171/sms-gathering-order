@@ -6,7 +6,6 @@ use App\Models\EventSetting;
 use App\Models\Manufacturer;
 use BackedEnum;
 use Filament\Actions\Action;
-use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -102,28 +101,6 @@ class ManageEventSettings extends Page
                             ]),
                     ]),
 
-                Section::make('Jadwal & Kontrol Sesi Pemesanan (Sesi PO)')
-                    ->description('Atur waktu buka/tutup sesi pemesanan otomatis atau gunakan saklar kontrol manual.')
-                    ->icon('heroicon-o-clock')
-                    ->schema([
-                        Toggle::make('is_ordering_active')
-                            ->label('Buka Sesi Pemesanan Sekarang (Saklar Manual)')
-                            ->helperText('Jika dinonaktifkan, tamu tidak dapat melakukan checkout pesanan baru.')
-                            ->onColor('success')
-                            ->offColor('danger'),
-                        Grid::make(2)
-                            ->schema([
-                                DateTimePicker::make('session_start_at')
-                                    ->label('Waktu Mulai Sesi PO (Otomatis)')
-                                    ->seconds(false)
-                                    ->helperText('Kosongkan jika ingin membuka sesi PO secara manual.'),
-                                DateTimePicker::make('session_end_at')
-                                    ->label('Waktu Selesai Sesi PO (Countdown Selesai)')
-                                    ->seconds(false)
-                                    ->helperText('Waktu hitung mundur di layar panggung dan aplikasi tamu.'),
-                            ]),
-                    ]),
-
                 Section::make('Status & Durasi Sesi PO per Pabrikan')
                     ->description('Buka atau tutup sesi pemesanan khusus untuk pabrikan tertentu, lengkap dengan batas durasi menit.')
                     ->icon('heroicon-o-building-storefront')
@@ -186,77 +163,6 @@ class ManageEventSettings extends Page
     protected function getHeaderActions(): array
     {
         return [
-            Action::make('start_session_now')
-                ->label(fn (): string => EventSetting::current()->isOrderingOpen() ? 'Sesi PO Aktif' : 'Buka Sesi PO Sekarang')
-                ->icon('heroicon-o-play')
-                ->color(fn (): string => EventSetting::current()->isOrderingOpen() ? 'gray' : 'success')
-                ->disabled(fn (): bool => EventSetting::current()->isOrderingOpen())
-                ->tooltip(fn (): string => EventSetting::current()->isOrderingOpen() ? 'Sesi PO saat ini sudah berjalan' : 'Buka sesi pemesanan PO sekarang')
-                ->requiresConfirmation()
-                ->modalHeading('Buka Sesi Pemesanan Sekarang?')
-                ->modalDescription('Sesi pemesanan akan langsung dibuka untuk seluruh tamu gathering.')
-                ->modalSubmitActionLabel('Ya, Buka Sesi')
-                ->action(function () {
-                    $event = EventSetting::current();
-                    $event->update([
-                        'is_ordering_active' => true,
-                        'session_start_at' => now(),
-                        'session_end_at' => now()->addHours(2),
-                    ]);
-                    $this->fillForm();
-                    Notification::make()
-                        ->success()
-                        ->title('Sesi PO Berhasil Dibuka!')
-                        ->body('Pemesanan aktif hingga pukul '.$event->fresh()->session_end_at?->format('H:i').' WIB.')
-                        ->send();
-                }),
-
-            Action::make('extend_15_minutes')
-                ->label('+15 Menit')
-                ->icon('heroicon-o-clock')
-                ->color(fn (): string => EventSetting::current()->isOrderingOpen() ? 'warning' : 'gray')
-                ->disabled(fn (): bool => ! EventSetting::current()->isOrderingOpen())
-                ->tooltip(fn (): string => EventSetting::current()->isOrderingOpen() ? 'Tambah 15 menit ke waktu hitung mundur PO' : 'Hanya dapat digunakan saat sesi PO aktif')
-                ->action(function () {
-                    $event = EventSetting::current();
-                    $currentEnd = $event->session_end_at ? $event->session_end_at : now();
-                    $newEnd = $currentEnd->copy()->addMinutes(15);
-                    $event->update([
-                        'session_end_at' => $newEnd,
-                        'is_ordering_active' => true,
-                    ]);
-                    $this->fillForm();
-                    Notification::make()
-                        ->success()
-                        ->title('Waktu PO Diperpanjang!')
-                        ->body('Waktu selesai diperpanjang hingga '.$newEnd->format('H:i').' WIB.')
-                        ->send();
-                }),
-
-            Action::make('stop_session_now')
-                ->label(fn (): string => ! EventSetting::current()->isOrderingOpen() ? 'Sesi PO Tertutup' : 'Tutup Sesi PO')
-                ->icon('heroicon-o-stop')
-                ->color(fn (): string => EventSetting::current()->isOrderingOpen() ? 'danger' : 'gray')
-                ->disabled(fn (): bool => ! EventSetting::current()->isOrderingOpen())
-                ->tooltip(fn (): string => ! EventSetting::current()->isOrderingOpen() ? 'Sesi PO saat ini sedang tidak aktif' : 'Tutup dan kunci sesi pemesanan sekarang')
-                ->requiresConfirmation()
-                ->modalHeading('Tutup Sesi Pemesanan Sekarang?')
-                ->modalDescription('Apotek tidak dapat mengirimkan pesanan baru lagi setelah sesi ditutup.')
-                ->modalSubmitActionLabel('Ya, Tutup Sesi')
-                ->action(function () {
-                    $event = EventSetting::current();
-                    $event->update([
-                        'is_ordering_active' => false,
-                        'session_end_at' => now(),
-                    ]);
-                    $this->fillForm();
-                    Notification::make()
-                        ->warning()
-                        ->title('Sesi PO Telah Ditutup')
-                        ->body('Pemesanan telah dinonaktifkan untuk seluruh tamu.')
-                        ->send();
-                }),
-
             Action::make('set_manufacturer_session')
                 ->label('Atur Sesi Pabrikan')
                 ->icon('heroicon-o-adjustments-horizontal')

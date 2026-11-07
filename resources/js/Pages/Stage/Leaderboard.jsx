@@ -100,7 +100,7 @@ export default function StageLeaderboard({
 
   // Tabs list: [Overall, ...Manufacturers]
   const tabs = [
-    { id: 'all', name: 'Semua Pabrik (Overall)', isOverall: true },
+    { id: 'all', name: 'Semua Pabrik (Overall)', isOverall: true, is_ordering_open: true },
     ...(manufacturers || []).map((m) => ({
       id: m.id,
       name: m.name,
@@ -111,11 +111,19 @@ export default function StageLeaderboard({
     })),
   ];
 
+  // Rotating Tabs list for Stage Auto-Rotate: Overall + ONLY OPEN Manufacturers
+  const rotatingTabs = [
+    tabs[0],
+    ...tabs.slice(1).filter((t) => t.is_ordering_open),
+  ];
+
   // Ref to hold current state for interval callbacks
   const activeTabRef = useRef(activeTab);
   activeTabRef.current = activeTab;
   const isAutoRotateRef = useRef(isAutoRotate);
   isAutoRotateRef.current = isAutoRotate;
+  const rotatingTabsRef = useRef(rotatingTabs);
+  rotatingTabsRef.current = rotatingTabs;
 
   // Countdown timer effect
   useEffect(() => {
@@ -126,25 +134,48 @@ export default function StageLeaderboard({
     return () => clearInterval(timer);
   }, [activeTab, manufacturers, event?.session_end_at]);
 
-  // Auto-rotate Carousel effect (15s per category)
+  // If currently active tab's session is closed while auto-rotate is on, fall back to Overall
+  useEffect(() => {
+    if (isAutoRotate && activeTab !== 'all') {
+      const isStillOpen = (manufacturers || []).some(
+        (m) => m.id === activeTab && m.is_ordering_open
+      );
+      if (!isStillOpen) {
+        setActiveTab('all');
+        setSlideSecondsLeft(SLIDE_DURATION_SECONDS);
+      }
+    }
+  }, [manufacturers, isAutoRotate, activeTab]);
+
+  // Auto-rotate Carousel effect (15s per category - ONLY rotates between Overall + Open Manufacturers)
   useEffect(() => {
     if (!isAutoRotate) return;
 
     const interval = setInterval(() => {
       setSlideSecondsLeft((prev) => {
-        if (prev <= 1) {
-          // Time to switch to next tab!
-          const currentIndex = tabs.findIndex((t) => t.id === activeTabRef.current);
-          const nextIndex = (currentIndex + 1) % tabs.length;
-          setActiveTab(tabs[nextIndex].id);
+        const curTabs = rotatingTabsRef.current;
+
+        // If only 1 tab available (Overall only, no manufacturer sessions active)
+        if (curTabs.length <= 1) {
+          if (activeTabRef.current !== 'all') {
+            setActiveTab('all');
+          }
           return SLIDE_DURATION_SECONDS;
         }
+
+        if (prev <= 1) {
+          const currentIndex = curTabs.findIndex((t) => t.id === activeTabRef.current);
+          const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % curTabs.length;
+          setActiveTab(curTabs[nextIndex].id);
+          return SLIDE_DURATION_SECONDS;
+        }
+
         return prev - 1;
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isAutoRotate, tabs.length]);
+  }, [isAutoRotate]);
 
   // Real-time polling every 5 seconds for stage display
   useEffect(() => {
@@ -265,6 +296,8 @@ export default function StageLeaderboard({
         <div className="flex items-center gap-1.5 lg:gap-2 overflow-x-auto no-scrollbar py-0.5">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
+            const isClosed = !tab.isOverall && tab.is_ordering_open === false;
+            const hasTimer = !tab.isOverall && tab.is_ordering_open && tab.session_end_at;
 
             return (
               <button
@@ -274,17 +307,31 @@ export default function StageLeaderboard({
                 className={`relative px-3.5 lg:px-4 py-2 rounded-xl text-xs lg:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-1.5 overflow-hidden ${
                   isActive
                     ? 'bg-brand-600 text-white shadow-sm ring-2 ring-brand-600/30'
-                    : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200/70'
+                    : isClosed
+                    ? 'bg-slate-50 text-slate-400 hover:bg-slate-100 border border-slate-200/60 opacity-60'
+                    : 'bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 shadow-xs'
                 }`}
               >
                 {tab.isOverall ? (
                   <span>⭐ {tab.name}</span>
                 ) : (
-                  <span>{tab.name}</span>
+                  <>
+                    <span>{tab.name}</span>
+                    {hasTimer && (
+                      <span className="text-[10px] bg-amber-400 text-slate-950 px-1.5 py-0.2 rounded font-black">
+                        ⚡ Flash
+                      </span>
+                    )}
+                    {isClosed && (
+                      <span className="text-[9px] bg-slate-200 text-slate-600 px-1 rounded font-semibold">
+                        Tutup
+                      </span>
+                    )}
+                  </>
                 )}
 
-                {/* Animated Timer Progress Bar inside Active Tab when Auto-Rotate is ON */}
-                {isActive && isAutoRotate && (
+                {/* Animated Timer Progress Bar inside Active Tab when Auto-Rotate is ON and more than 1 screen */}
+                {isActive && isAutoRotate && rotatingTabs.length > 1 && (
                   <span
                     className="absolute bottom-0 left-0 h-1 bg-amber-400 transition-all duration-1000 ease-linear rounded-full"
                     style={{ width: `${progressPercent}%` }}
@@ -310,7 +357,11 @@ export default function StageLeaderboard({
             {isAutoRotate ? (
               <>
                 <Pause className="w-3.5 h-3.5 fill-emerald-600 text-emerald-600" />
-                <span className="hidden sm:inline">Auto-Rotate ({slideSecondsLeft}s)</span>
+                <span className="hidden sm:inline">
+                  {rotatingTabs.length <= 1
+                    ? 'Monitoring: Overall'
+                    : `Auto-Rotate (${slideSecondsLeft}s • ${rotatingTabs.length} Layar)`}
+                </span>
               </>
             ) : (
               <>

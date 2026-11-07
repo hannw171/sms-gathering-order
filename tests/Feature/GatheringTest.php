@@ -459,46 +459,32 @@ class GatheringTest extends TestCase
     {
         $admin = User::factory()->create();
 
-        // Initially close session
-        EventSetting::current()->update([
-            'is_ordering_active' => false,
-            'session_start_at' => null,
-            'session_end_at' => null,
-        ]);
-
-        // 1. When closed: start is enabled, stop & extend are disabled
+        // 1. Open all manufacturers
         Livewire::actingAs($admin)
             ->test(ManageEventSettings::class)
-            ->assertActionEnabled('start_session_now')
-            ->assertActionDisabled('stop_session_now')
-            ->assertActionDisabled('extend_15_minutes')
-            ->callAction('start_session_now');
+            ->callAction('open_all_manufacturers');
 
-        $event = EventSetting::current()->fresh();
-        $this->assertTrue($event->is_ordering_active);
-        $this->assertNotNull($event->session_start_at);
+        $this->assertEquals(0, Manufacturer::where('is_ordering_active', false)->count());
 
-        // 2. When open: start is disabled, stop & extend are enabled
-        $oldEnd = $event->session_end_at;
+        // 2. Close all manufacturers
         Livewire::actingAs($admin)
             ->test(ManageEventSettings::class)
-            ->assertActionDisabled('start_session_now')
-            ->assertActionEnabled('stop_session_now')
-            ->assertActionEnabled('extend_15_minutes')
-            ->callAction('extend_15_minutes');
+            ->callAction('close_all_manufacturers');
 
-        $event->refresh();
-        $this->assertTrue($event->session_end_at->gt($oldEnd));
+        $this->assertEquals(0, Manufacturer::where('is_ordering_active', true)->count());
 
-        // 3. Stop now action
+        // 3. Set manufacturer session with duration
+        $manufacturer = $this->product->manufacturer;
         Livewire::actingAs($admin)
             ->test(ManageEventSettings::class)
-            ->callAction('stop_session_now')
-            ->assertActionEnabled('start_session_now')
-            ->assertActionDisabled('stop_session_now');
+            ->callAction('set_manufacturer_session', [
+                'manufacturer_ids' => [$manufacturer->id],
+                'duration_minutes' => '30',
+            ]);
 
-        $event->refresh();
-        $this->assertFalse($event->is_ordering_active);
+        $manufacturer->refresh();
+        $this->assertTrue($manufacturer->is_ordering_active);
+        $this->assertNotNull($manufacturer->session_end_at);
     }
 
     public function test_checkout_is_blocked_when_session_po_is_not_open(): void
