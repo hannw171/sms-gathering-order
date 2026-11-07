@@ -72,6 +72,50 @@ class GatheringTest extends TestCase
         $this->assertEquals($this->pharmacy->id, session('guest_pharmacy_id'));
     }
 
+    public function test_guest_can_view_cart_page(): void
+    {
+        $response = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->get('/keranjang');
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page->component('Guest/Cart'));
+    }
+
+    public function test_guest_can_view_catalog_page(): void
+    {
+        $response = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->get('/katalog');
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page->component('Guest/Catalog'));
+    }
+
+    public function test_guest_can_view_leaderboard_page(): void
+    {
+        $response = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->get('/leaderboard');
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page->component('Guest/Leaderboard'));
+    }
+
+    public function test_guest_can_view_orders_page(): void
+    {
+        $response = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->get('/pesanan');
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page->component('Guest/Orders'));
+    }
+
+    public function test_anyone_can_view_stage_page(): void
+    {
+        $response = $this->get('/stage');
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page->component('Stage/Leaderboard'));
+    }
+
     public function test_device_conflict_triggered_when_active_on_another_device(): void
     {
         $this->pharmacy->update([

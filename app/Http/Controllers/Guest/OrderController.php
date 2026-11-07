@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Guest;
 
 use App\Http\Controllers\Controller;
 use App\Models\EventSetting;
+use App\Models\Manufacturer;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Pharmacy;
