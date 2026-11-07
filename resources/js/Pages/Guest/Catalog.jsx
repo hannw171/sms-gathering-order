@@ -4,7 +4,7 @@ import GuestLayout from '../../Layouts/GuestLayout';
 import { formatRupiah } from '../../utils/format';
 import { useCart } from '../../hooks/useCart';
 import QuantityStepper from '../../Components/QuantityStepper';
-import { Search, ShoppingBag, ArrowRight, Sparkles, Receipt, Trophy, Gift, Ticket, X } from 'lucide-react';
+import { Search, ShoppingBag, ArrowRight, Sparkles, Receipt, Trophy, Gift, Ticket, X, Clock, Lock } from 'lucide-react';
 
 export default function Catalog({
   pharmacy,
@@ -80,27 +80,39 @@ export default function Catalog({
             )}
           </div>
 
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 border border-white/10">
+          <Link
+            href="/pesanan"
+            className="bg-white/10 hover:bg-white/15 backdrop-blur-sm rounded-xl p-2.5 border border-white/10 transition-colors block"
+          >
             <span className="text-[10px] text-amber-200 block uppercase font-medium">
               Total Voucher
             </span>
             <div className="text-base font-bold text-amber-300 mt-0.5 truncate">
               {hasVouchers ? formatRupiah(currentRewards.total_vouchers) : 'Rp 0'}
             </div>
-            <span className="text-[10px] text-slate-300 block">
-              {ordersCount > 0 ? `${ordersCount} PO Terkirim` : 'Belum ada PO'}
+            <span className="text-[10px] text-amber-200/90 font-medium flex items-center gap-1">
+              <span>{ordersCount > 0 ? `${ordersCount} PO Terkirim` : 'Belum ada PO'}</span>
+              <span>→</span>
             </span>
-          </div>
+          </Link>
         </div>
 
         {/* Reward Status & Highlights */}
         <div className="relative z-10 pt-2 border-t border-white/15">
           {hasAnyReward ? (
             <div className="space-y-1.5">
-              <span className="text-[10px] text-amber-200 font-semibold uppercase tracking-wider block flex items-center gap-1">
-                <Gift className="w-3 h-3 text-amber-400" />
-                <span>Hadiah &amp; Bonus Diraih:</span>
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-amber-200 font-semibold uppercase tracking-wider flex items-center gap-1">
+                  <Gift className="w-3 h-3 text-amber-400" />
+                  <span>Hadiah &amp; Bonus Diraih:</span>
+                </span>
+                <Link
+                  href="/pesanan"
+                  className="text-[10px] font-bold text-amber-300 hover:text-amber-200 underline underline-offset-2"
+                >
+                  Lihat Rincian →
+                </Link>
+              </div>
               <div className="flex flex-wrap gap-1.5">
                 {hasVouchers && (
                   <span className="bg-amber-400/20 px-2 py-0.5 rounded-lg text-[10px] font-semibold text-amber-200 border border-amber-300/30 flex items-center gap-1">
@@ -144,6 +156,20 @@ export default function Catalog({
           )}
         </div>
       </div>
+
+      {/* Sesi PO Inactive Notice Banner */}
+      {event?.is_ordering_open === false && (
+        <div className="mx-3.5 mb-2 bg-amber-50 border border-amber-200/90 rounded-2xl p-3 flex items-center gap-2.5 text-xs text-amber-900 shadow-xs">
+          <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+          <span className="text-[11px] font-medium leading-tight">
+            {event?.ordering_status === 'scheduled'
+              ? 'Sesi Pemesanan belum dibuka. Anda dapat memilih produk & menyiapkan keranjang terlebih dahulu.'
+              : event?.ordering_status === 'ended'
+              ? 'Sesi Pemesanan gathering telah berakhir.'
+              : 'Sesi Pemesanan sedang ditutup sementara oleh panitia.'}
+          </span>
+        </div>
+      )}
 
       {/* Sticky Search & Filter Chips Bar */}
       <div 

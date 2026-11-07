@@ -102,13 +102,23 @@ class GatheringService
                 'city' => $pharmacy->city,
                 'total_spending' => $totalSpending,
                 'orders_count' => $pharmacy->orders->count(),
+                'first_order_at' => $pharmacy->orders->min('created_at'),
                 'last_order_at' => $pharmacy->orders->max('created_at'),
             ];
-        })->sortByDesc('total_spending')->values()->map(function ($item, $index) {
-            $item['rank'] = $index + 1;
+        })
+            ->sort(function ($a, $b) {
+                if ($b['total_spending'] !== $a['total_spending']) {
+                    return $b['total_spending'] <=> $a['total_spending'];
+                }
 
-            return $item;
-        });
+                return ($a['first_order_at'] ?? '9999-99-99') <=> ($b['first_order_at'] ?? '9999-99-99');
+            })
+            ->values()
+            ->map(function ($item, $index) {
+                $item['rank'] = $index + 1;
+
+                return $item;
+            });
 
         // Calculate for each Manufacturer in memory
         $byManufacturer = [];
@@ -117,11 +127,12 @@ class GatheringService
         foreach ($manufacturers as $manufacturer) {
             $mId = (int) $manufacturer->id;
             $mRanked = $pharmacies->map(function ($pharmacy) use ($mId) {
-                $totalSpending = (float) $pharmacy->orders->flatMap->items
+                $matchingItems = $pharmacy->orders->flatMap->items
                     ->filter(function ($item) use ($mId) {
                         return $item->product && (int) $item->product->manufacturer_id === $mId;
-                    })
-                    ->sum('subtotal');
+                    });
+
+                $totalSpending = (float) $matchingItems->sum('subtotal');
 
                 return [
                     'id' => $pharmacy->id,
@@ -131,13 +142,23 @@ class GatheringService
                     'city' => $pharmacy->city,
                     'total_spending' => $totalSpending,
                     'orders_count' => $pharmacy->orders->count(),
+                    'first_order_at' => $pharmacy->orders->min('created_at'),
                     'last_order_at' => $pharmacy->orders->max('created_at'),
                 ];
-            })->sortByDesc('total_spending')->values()->map(function ($item, $index) {
-                $item['rank'] = $index + 1;
+            })
+                ->sort(function ($a, $b) {
+                    if ($b['total_spending'] !== $a['total_spending']) {
+                        return $b['total_spending'] <=> $a['total_spending'];
+                    }
 
-                return $item;
-            });
+                    return ($a['first_order_at'] ?? '9999-99-99') <=> ($b['first_order_at'] ?? '9999-99-99');
+                })
+                ->values()
+                ->map(function ($item, $index) {
+                    $item['rank'] = $index + 1;
+
+                    return $item;
+                });
 
             $byManufacturer[$mId] = $mRanked;
             $statsByManufacturer[$mId] = [

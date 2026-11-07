@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Pages\ManageEventSettings;
 use App\Filament\Pages\RewardRecapReport;
 use App\Models\EventSetting;
 use App\Models\Manufacturer;
@@ -334,6 +335,147 @@ class GatheringTest extends TestCase
         ]);
 
         $checkoutResponse->assertRedirect('/');
+        $this->assertEquals(0, Order::count());
+    }
+
+    public function test_guest_can_view_order_history_and_reward_breakdown_page(): void
+    {
+        $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->post('/checkout', [
+                'items' => [
+                    [
+                        'product_id' => $this->product->id,
+                        'quantity' => 5,
+                    ],
+                ],
+                'notes' => 'Pesanan Riwayat Test',
+            ]);
+
+        $response = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->get('/pesanan');
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Guest/Orders')
+            ->has('pharmacy')
+            ->has('milestone')
+            ->has('rewards')
+            ->has('orders', 1)
+        );
+    }
+
+    public function test_guest_can_view_leaderboard_with_manufacturer_standings(): void
+    {
+        $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->post('/checkout', [
+                'items' => [
+                    [
+                        'product_id' => $this->product->id,
+                        'quantity' => 2,
+                    ],
+                ],
+            ]);
+
+        $response = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->get('/leaderboard');
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Guest/Leaderboard')
+            ->has('leaderboard')
+            ->has('leaderboards_by_manufacturer')
+            ->has('manufacturers')
+            ->has('myStandings')
+            ->has('myStandings.overall')
+            ->has('myStandings.manufacturers')
+            ->where('myStandings.overall.rank', 1)
+        );
+    }
+
+    public function test_admin_can_access_and_save_event_settings_page(): void
+    {
+        $admin = User::factory()->create();
+        $this->actingAs($admin)
+            ->get('/admin/manage-event-settings')
+            ->assertSuccessful();
+
+        Livewire::actingAs($admin)
+            ->test(ManageEventSettings::class)
+            ->set('data.venue_name', 'Grand Ballroom Hotel Aston')
+            ->set('data.registration_schedule', '09:00 - 12:00 WIB')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertEquals('Grand Ballroom Hotel Aston', EventSetting::current()->venue_name);
+        $this->assertEquals('09:00 - 12:00 WIB', EventSetting::current()->registration_schedule);
+    }
+
+    public function test_admin_can_trigger_event_setting_header_actions(): void
+    {
+        $admin = User::factory()->create();
+
+        // Initially close session
+        EventSetting::current()->update([
+            'is_ordering_active' => false,
+            'session_start_at' => null,
+            'session_end_at' => null,
+        ]);
+
+        // 1. When closed: start is enabled, stop & extend are disabled
+        Livewire::actingAs($admin)
+            ->test(ManageEventSettings::class)
+            ->assertActionEnabled('start_session_now')
+            ->assertActionDisabled('stop_session_now')
+            ->assertActionDisabled('extend_15_minutes')
+            ->callAction('start_session_now');
+
+        $event = EventSetting::current()->fresh();
+        $this->assertTrue($event->is_ordering_active);
+        $this->assertNotNull($event->session_start_at);
+
+        // 2. When open: start is disabled, stop & extend are enabled
+        $oldEnd = $event->session_end_at;
+        Livewire::actingAs($admin)
+            ->test(ManageEventSettings::class)
+            ->assertActionDisabled('start_session_now')
+            ->assertActionEnabled('stop_session_now')
+            ->assertActionEnabled('extend_15_minutes')
+            ->callAction('extend_15_minutes');
+
+        $event->refresh();
+        $this->assertTrue($event->session_end_at->gt($oldEnd));
+
+        // 3. Stop now action
+        Livewire::actingAs($admin)
+            ->test(ManageEventSettings::class)
+            ->callAction('stop_session_now')
+            ->assertActionEnabled('start_session_now')
+            ->assertActionDisabled('stop_session_now');
+
+        $event->refresh();
+        $this->assertFalse($event->is_ordering_active);
+    }
+
+    public function test_checkout_is_blocked_when_session_po_is_not_open(): void
+    {
+        // Scheduled in future
+        EventSetting::current()->update([
+            'is_ordering_active' => true,
+            'session_start_at' => now()->addHour(),
+            'session_end_at' => now()->addHours(3),
+        ]);
+
+        $response = $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->post('/checkout', [
+                'items' => [
+                    [
+                        'product_id' => $this->product->id,
+                        'quantity' => 1,
+                    ],
+                ],
+            ]);
+
+        $response->assertSessionHasErrors('error');
         $this->assertEquals(0, Order::count());
     }
 }

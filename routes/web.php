@@ -24,6 +24,7 @@ Route::middleware('guest.pharmacy')->group(function () {
     Route::get('/keranjang', [OrderController::class, 'cart'])->name('guest.cart');
     Route::post('/keranjang/preview-rewards', [OrderController::class, 'previewRewards'])->name('guest.cart.preview');
     Route::post('/checkout', [OrderController::class, 'checkout'])->name('guest.checkout');
+    Route::get('/pesanan', [OrderController::class, 'history'])->name('guest.orders');
     Route::get('/order/sukses/{order}', [OrderController::class, 'success'])->name('guest.order.success');
 });
 

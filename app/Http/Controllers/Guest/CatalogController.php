@@ -79,8 +79,12 @@ class CatalogController extends Controller
             'searchQuery' => $request->input('search', ''),
             'event' => [
                 'name' => $eventSetting->event_name,
+                'venue_name' => $eventSetting->venue_name,
+                'session_start_at' => $eventSetting->session_start_at,
                 'session_end_at' => $eventSetting->session_end_at,
                 'is_ordering_active' => $eventSetting->is_ordering_active,
+                'is_ordering_open' => $eventSetting->isOrderingOpen(),
+                'ordering_status' => $eventSetting->getOrderingStatus(),
             ],
         ]);
     }

@@ -16,6 +16,8 @@ import {
   CheckCircle,
   ShoppingBag,
   HelpCircle,
+  Clock,
+  Lock,
 } from 'lucide-react';
 
 export default function Cart({
@@ -503,15 +505,51 @@ export default function Cart({
               </div>
             </div>
 
+            {/* Ordering Closed / Scheduled Notice Banner */}
+            {event?.is_ordering_open === false && (
+              <div className="bg-amber-50 border border-amber-300 rounded-2xl p-3.5 flex items-start gap-2.5 text-xs text-amber-900 shadow-xs">
+                <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block font-bold">
+                    {event?.ordering_status === 'scheduled'
+                      ? 'Sesi Pemesanan Belum Dimulai'
+                      : event?.ordering_status === 'ended'
+                      ? 'Sesi Pemesanan Telah Berakhir'
+                      : 'Sesi Pemesanan Ditutup Sementara'}
+                  </strong>
+                  <span className="text-[11px] text-amber-800 leading-snug">
+                    {event?.ordering_status === 'scheduled'
+                      ? 'Anda dapat memilih obat dan menyiapkan keranjang terlebih dahulu. Tombol checkout akan aktif otomatis saat sesi dimulai.'
+                      : event?.ordering_status === 'ended'
+                      ? 'Waktu sesi pemesanan gathering telah selesai. Pesanan baru tidak dapat dikirim.'
+                      : 'Panitia sedang menjeda penerimaan pesanan. Silakan tunggu informasi berikutnya dari panitia.'}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Submit CTA Button */}
             <button
               type="button"
               onClick={() => setShowConfirmModal(true)}
-              disabled={isSubmitting || totalItems === 0}
+              disabled={isSubmitting || totalItems === 0 || event?.is_ordering_open === false}
               className="w-full bg-brand-600 hover:bg-brand-700 active:bg-brand-800 disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-2xl shadow-floating flex items-center justify-center gap-2 text-sm transition-all"
             >
-              <Send className="w-4 h-4" />
-              <span>Kirim Pesanan Sekarang ({formatRupiah(totalAmount)})</span>
+              {event?.is_ordering_open === false ? (
+                <>
+                  <Lock className="w-4 h-4" />
+                  <span>
+                    {event?.ordering_status === 'scheduled'
+                      ? 'Menunggu Sesi PO Dibuka'
+                      : 'Sesi Pemesanan Ditutup'}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4" />
+                  <span>Kirim Pesanan Sekarang ({formatRupiah(totalAmount)})</span>
+                </>
+              )}
             </button>
           </>
         )}

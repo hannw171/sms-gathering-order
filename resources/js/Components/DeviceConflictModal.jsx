@@ -17,6 +17,11 @@ export default function DeviceConflictModal({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#090D16]/65 backdrop-blur-[2px] animate-in fade-in duration-200"
       data-node-id="1:77"
       data-name="Onboarding - Device Conflict Modal"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isProcessing) {
+          onCancel?.();
+        }
+      }}
     >
       {/* Modal Card Container (Figma node 1:153) */}
       <div className="relative w-full max-w-[320px] bg-white rounded-[16px] p-5 shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] border border-slate-100 flex flex-col items-center text-center animate-in zoom-in-95 duration-150 overflow-hidden">

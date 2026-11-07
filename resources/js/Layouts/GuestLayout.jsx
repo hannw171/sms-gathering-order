@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
-import { ShoppingBag, ShoppingCart, Trophy, LogOut } from 'lucide-react';
+import { ShoppingBag, ShoppingCart, ClipboardList, Trophy, LogOut } from 'lucide-react';
 import { useCart } from '../hooks/useCart';
 
 export default function GuestLayout({ children, pharmacy, milestone, title }) {
@@ -32,6 +32,7 @@ export default function GuestLayout({ children, pharmacy, milestone, title }) {
 
   const isCatalog = url.startsWith('/katalog');
   const isCart = url.startsWith('/keranjang');
+  const isOrders = url.startsWith('/pesanan');
   const isLeaderboard = url.startsWith('/leaderboard');
 
   return (
@@ -123,6 +124,16 @@ export default function GuestLayout({ children, pharmacy, milestone, title }) {
               {totalItems > 0 && (
                 <span className="absolute top-0 right-2 w-2 h-2 rounded-full bg-emerald-500" />
               )}
+            </Link>
+
+            <Link
+              href="/pesanan"
+              className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg transition-colors ${
+                isOrders ? 'text-brand-600 font-bold' : 'text-slate-500 hover:text-slate-800 font-medium'
+              }`}
+            >
+              <ClipboardList className={`w-5 h-5 ${isOrders ? 'stroke-[2.5]' : ''}`} />
+              <span className="text-[11px]">Pesanan</span>
             </Link>
 
             <Link

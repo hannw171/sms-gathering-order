@@ -21,6 +21,7 @@ export default function Onboarding({ event, samplePharmacies }) {
 
   const [search, setSearch] = useState(flash?.searchedQuery || '');
   const [dismissNotFound, setDismissNotFound] = useState(false);
+  const [dismissConflict, setDismissConflict] = useState(false);
   const [selectedPharmacy, setSelectedPharmacy] = useState(null);
   const [isDemoConflictModalOpen, setIsDemoConflictModalOpen] = useState(false);
   const [isDemoNotFoundOpen, setIsDemoNotFoundOpen] = useState(false);
@@ -32,6 +33,11 @@ export default function Onboarding({ event, samplePharmacies }) {
     }
     setDismissNotFound(false);
   }, [flash?.notFound, flash?.searchedQuery]);
+
+  // Reset conflict dismissal when a new conflict arrives
+  useEffect(() => {
+    setDismissConflict(false);
+  }, [flash?.conflict, flash?.conflictData]);
 
   // Form for submission
   const { data, setData, post, processing } = useForm({
@@ -96,17 +102,24 @@ export default function Onboarding({ event, samplePharmacies }) {
     });
   };
 
+  const handleCancelConflict = () => {
+    setDismissConflict(true);
+    setIsDemoConflictModalOpen(false);
+    setData('force_takeover', false);
+  };
+
   // Conflict modal state: either real from backend flash or simulated via demo button
-  const activeConflict =
-    (hasServerConflict ? serverConflictData : null) ||
-    (isDemoConflictModalOpen
-      ? {
-          pharmacy_id: selectedPharmacy?.id || 1,
-          pharmacy_name: selectedPharmacy?.name || 'Apotek Kimia Mandiri',
-          previous_device: 'Chrome Mobile • Samsung S23',
-          last_active_time: 'Terakhir aktif 2 menit lalu',
-        }
-      : null);
+  const activeConflict = dismissConflict
+    ? null
+    : ((hasServerConflict ? serverConflictData : null) ||
+       (isDemoConflictModalOpen
+         ? {
+             pharmacy_id: selectedPharmacy?.id || 1,
+             pharmacy_name: selectedPharmacy?.name || 'Apotek Kimia Mandiri',
+             previous_device: 'Chrome Mobile • Samsung S23',
+             last_active_time: 'Terakhir aktif 2 menit lalu',
+           }
+         : null));
 
   return (
     <div className="min-h-screen bg-slate-900 flex justify-center items-center py-0 sm:py-6 selection:bg-brand-500 selection:text-white">
@@ -140,7 +153,7 @@ export default function Onboarding({ event, samplePharmacies }) {
 
             <div className="inline-flex items-center gap-1.5 bg-[#E2E7FF] text-[#1565C0] rounded-full px-3 py-1.5 text-[12px] font-semibold tracking-[0.12px]">
               <MapPin className="w-3.5 h-3.5 text-[#1565C0] shrink-0" />
-              <span>Ballroom Grand Hotel &bull; Meja Undangan</span>
+              <span>{event?.venue_name || 'Ballroom Grand Hotel • Meja Undangan'}</span>
             </div>
           </header>
 
@@ -391,10 +404,10 @@ export default function Onboarding({ event, samplePharmacies }) {
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="text-[13px] font-semibold text-[#131B2E]">
-                Meja Registrasi Buka: 08:30 – 13:00 WIB
+                {event?.registration_schedule || 'Meja Registrasi Buka: 08:30 – 13:00 WIB'}
               </h4>
               <p className="text-[11px] text-[#424752] leading-[16px]">
-                PIC Meja Bantuan siap melayani pencarian manual ID di Area Foyer Ballroom.
+                {event?.registration_help_note || 'PIC Meja Bantuan siap melayani pencarian manual ID di Area Foyer Ballroom.'}
               </p>
             </div>
           </div>
@@ -438,9 +451,7 @@ export default function Onboarding({ event, samplePharmacies }) {
           previousDevice={activeConflict?.previous_device || 'Chrome Mobile • Samsung S23'}
           lastActiveTime={activeConflict?.last_active_time || 'Terakhir aktif 2 menit lalu'}
           onConfirm={handleTakeover}
-          onCancel={() => {
-            setIsDemoConflictModalOpen(false);
-          }}
+          onCancel={handleCancelConflict}
           isProcessing={processing}
         />
       </div>

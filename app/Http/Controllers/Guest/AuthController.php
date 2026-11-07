@@ -42,8 +42,14 @@ class AuthController extends Controller
         return Inertia::render('Guest/Onboarding', [
             'event' => [
                 'name' => $eventSetting->event_name,
+                'venue_name' => $eventSetting->venue_name,
+                'registration_schedule' => $eventSetting->registration_schedule,
+                'registration_help_note' => $eventSetting->registration_help_note,
+                'session_start_at' => $eventSetting->session_start_at,
                 'session_end_at' => $eventSetting->session_end_at,
                 'is_ordering_active' => $eventSetting->is_ordering_active,
+                'is_ordering_open' => $eventSetting->isOrderingOpen(),
+                'ordering_status' => $eventSetting->getOrderingStatus(),
             ],
             // Pre-seed all real pharmacies for instant client-side autocomplete
             'samplePharmacies' => Pharmacy::select('id', 'customer_code', 'name', 'city', 'owner_name')

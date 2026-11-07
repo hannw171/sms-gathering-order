@@ -3,7 +3,7 @@ import { Head, Link } from '@inertiajs/react';
 import GuestLayout from '../../Layouts/GuestLayout';
 import { formatRupiah } from '../../utils/format';
 import { useCart } from '../../hooks/useCart';
-import { CheckCircle2, Trophy, ArrowRight, ShoppingBag, Sparkles, Gift, Ticket, Award } from 'lucide-react';
+import { CheckCircle2, Trophy, ArrowRight, ShoppingBag, Sparkles, Gift, Ticket, Award, ClipboardList } from 'lucide-react';
 
 export default function Success({ order, milestone, pharmacy, rewards }) {
   const { clearCart } = useCart(pharmacy?.id);
@@ -199,6 +199,13 @@ export default function Success({ order, milestone, pharmacy, rewards }) {
           >
             <ShoppingBag className="w-4 h-4" />
             <span>Tambah Pesanan Lain di Katalog</span>
+          </Link>
+          <Link
+            href="/pesanan"
+            className="w-full bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 text-xs transition-colors"
+          >
+            <ClipboardList className="w-4 h-4 text-amber-600" />
+            <span>Lihat Riwayat PO &amp; Rincian Hadiah</span>
           </Link>
           <Link
             href="/leaderboard"

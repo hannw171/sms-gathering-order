@@ -52,8 +52,11 @@ class OrderController extends Controller
             ],
             'event' => [
                 'name' => $eventSetting->event_name,
+                'session_start_at' => $eventSetting->session_start_at,
                 'session_end_at' => $eventSetting->session_end_at,
                 'is_ordering_active' => $eventSetting->is_ordering_active,
+                'is_ordering_open' => $eventSetting->isOrderingOpen(),
+                'ordering_status' => $eventSetting->getOrderingStatus(),
             ],
         ]);
     }
@@ -68,8 +71,15 @@ class OrderController extends Controller
         $pharmacy = Pharmacy::findOrFail($pharmacyId);
 
         $eventSetting = EventSetting::current();
-        if (! $eventSetting->is_ordering_active) {
-            return back()->withErrors(['error' => 'Sesi pemesanan telah ditutup oleh panitia.']);
+        if (! $eventSetting->isOrderingOpen()) {
+            $status = $eventSetting->getOrderingStatus();
+            $msg = match ($status) {
+                'scheduled' => 'Sesi pemesanan belum dimulai (akan dimulai pukul '.($eventSetting->session_start_at?->format('H:i') ?? '-').' WIB).',
+                'ended' => 'Sesi pemesanan gathering telah berakhir.',
+                default => 'Sesi pemesanan sedang ditutup oleh panitia.',
+            };
+
+            return back()->withErrors(['error' => $msg]);
         }
 
         $request->validate([
@@ -146,6 +156,61 @@ class OrderController extends Controller
             'milestone' => $milestone,
             'rewards' => $cumulativeRewards,
             'pharmacy' => $milestone['pharmacy'],
+        ]);
+    }
+
+    public function history(Request $request): Response|RedirectResponse
+    {
+        $pharmacyId = $request->session()->get('guest_pharmacy_id');
+        if (! $pharmacyId) {
+            return redirect()->route('guest.login');
+        }
+
+        $pharmacy = Pharmacy::find($pharmacyId);
+        if (! $pharmacy) {
+            return redirect()->route('guest.login');
+        }
+
+        $orders = $pharmacy->orders()
+            ->with(['items.product'])
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function (Order $order): array {
+                return [
+                    'id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'total_amount' => (float) $order->total_amount,
+                    'total_items' => (int) $order->total_items,
+                    'status' => $order->status,
+                    'notes' => $order->notes,
+                    'reward_selections' => $order->reward_selections ?? [],
+                    'created_at_formatted' => $order->created_at?->format('H:i').' WIB',
+                    'created_date_formatted' => $order->created_at?->translatedFormat('d M Y, H:i').' WIB',
+                    'items' => $order->items->map(fn (OrderItem $item): array => [
+                        'id' => $item->id,
+                        'sku' => $item->product?->sku ?? '-',
+                        'product_name' => $item->product_name,
+                        'manufacturer_name' => $item->manufacturer_name,
+                        'uom' => $item->uom,
+                        'price' => (float) $item->price,
+                        'quantity' => (int) $item->quantity,
+                        'subtotal' => (float) $item->subtotal,
+                    ])->values()->all(),
+                ];
+            });
+
+        $milestone = $this->gatheringService->getPharmacyMilestone($pharmacy);
+        $cumulativeRewards = $this->rewardService->calculateForPharmacy($pharmacy);
+
+        return Inertia::render('Guest/Orders', [
+            'pharmacy' => array_merge($milestone['pharmacy'], [
+                'is_reward_handed_over' => ! is_null($pharmacy->reward_handed_over_at),
+                'reward_handed_over_at' => $pharmacy->reward_handed_over_at?->format('H:i').' WIB',
+                'reward_receiver_name' => $pharmacy->reward_receiver_name,
+            ]),
+            'milestone' => $milestone,
+            'rewards' => $cumulativeRewards,
+            'orders' => $orders,
         ]);
     }
 
