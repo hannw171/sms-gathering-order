@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Filament\Pages\LeaderboardReport;
 use App\Filament\Pages\PharmacyOrdersReport;
 use App\Filament\Pages\ProductSalesReport;
+use App\Filament\Pages\RevenueReport;
 use App\Filament\Pages\RewardRecapReport;
 use App\Filament\Widgets\DashboardOverviewWidget;
 use App\Filament\Widgets\ManufacturerRevenueOverviewWidget;
@@ -174,11 +175,55 @@ class GatheringReportsTest extends TestCase
     {
         $this->actingAs($this->admin);
 
-        $component = Livewire::test(RewardRecapReport::class);
-        $response = $component->instance()->exportCsv();
+        $pages = [
+            RewardRecapReport::class,
+            ProductSalesReport::class,
+            RevenueReport::class,
+            LeaderboardReport::class,
+            PharmacyOrdersReport::class,
+        ];
 
-        $this->assertEquals(200, $response->getStatusCode());
-        $this->assertStringContainsString('text/csv', $response->headers->get('Content-Type'));
+        foreach ($pages as $pageClass) {
+            $component = Livewire::test($pageClass);
+            $response = $component->instance()->exportCsv();
+
+            $this->assertEquals(200, $response->getStatusCode());
+            $this->assertStringContainsString(
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                $response->headers->get('Content-Type')
+            );
+            $this->assertStringContainsString('.xlsx', $response->headers->get('Content-Disposition'));
+        }
+    }
+
+    public function test_all_a4_print_report_routes_render_properly(): void
+    {
+        $this->actingAs($this->admin);
+
+        $routes = [
+            route('admin.reports.reward-recap.print') => $this->pharmacy->name,
+            route('admin.reports.product-sales.print') => $this->product->name,
+            route('admin.reports.revenue.print') => $this->zenith->name,
+            route('admin.reports.leaderboard.print') => $this->pharmacy->name,
+            route('admin.reports.pharmacy-orders.print') => $this->pharmacy->name,
+            route('admin.reports.pharmacy-detail.print', $this->pharmacy) => $this->pharmacy->name,
+        ];
+
+        foreach ($routes as $url => $expectedText) {
+            $this->get($url)
+                ->assertSuccessful()
+                ->assertSee('PT SATRIA MEDIKA SEJAHTERA')
+                ->assertSee($expectedText);
+        }
+
+        // Also test single pharmacy Excel export route
+        $excelResponse = $this->get(route('admin.reports.pharmacy-detail.excel', $this->pharmacy));
+        $excelResponse->assertSuccessful();
+        $this->assertStringContainsString(
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            $excelResponse->headers->get('Content-Type')
+        );
+        $this->assertStringStartsWith("PK\x03\x04", $excelResponse->streamedContent());
     }
 
     public function test_reward_recap_stats_widget_computes_correctly(): void

@@ -6,6 +6,7 @@ use App\Filament\Widgets\PharmacyOrdersStatsWidget;
 use App\Models\Manufacturer;
 use App\Models\Order;
 use App\Models\Pharmacy;
+use App\Services\ReportExportService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
@@ -63,7 +64,7 @@ class PharmacyOrdersReport extends Page implements HasTable
     {
         return [
             Action::make('exportCsv')
-                ->label('Download Excel / CSV')
+                ->label('Download Excel (.xlsx)')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('success')
                 ->action('exportCsv'),
@@ -71,7 +72,7 @@ class PharmacyOrdersReport extends Page implements HasTable
                 ->label('Cetak Rekap A4')
                 ->icon('heroicon-o-printer')
                 ->color('gray')
-                ->extraAttributes(['onclick' => 'window.print()']),
+                ->url(fn (): string => route('admin.reports.pharmacy-orders.print'), shouldOpenInNewTab: true),
         ];
     }
 
@@ -153,6 +154,14 @@ class PharmacyOrdersReport extends Page implements HasTable
                     ->modalHeading(fn (Pharmacy $record): string => 'Rincian Belanja: '.$record->name)
                     ->modalDescription(fn (Pharmacy $record): string => $record->customer_code.' • '.($record->city ?? '-'))
                     ->modalContent(fn (Pharmacy $record) => view('filament.pages.partials.pharmacy-orders-detail', ['pharmacy' => $record])),
+
+                Action::make('print_pharmacy')
+                    ->label('Cetak BA A4')
+                    ->icon('heroicon-o-printer')
+                    ->color('gray')
+                    ->button()
+                    ->size('xs')
+                    ->url(fn (Pharmacy $record): string => route('admin.reports.pharmacy-detail.print', $record), shouldOpenInNewTab: true),
             ])
             ->filters([
                 Filter::make('has_orders')
@@ -190,58 +199,6 @@ class PharmacyOrdersReport extends Page implements HasTable
 
     public function exportCsv(): StreamedResponse
     {
-        $pharmacies = Pharmacy::with([
-            'orders' => function ($q) {
-                $q->where('status', '!=', 'cancelled')->with(['items.product.manufacturer']);
-            },
-        ])->orderBy('customer_code')->get();
-
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="Rekap_Belanja_Seluruh_Apotek_'.now()->format('Ymd_His').'.csv"',
-        ];
-
-        return response()->streamDownload(function () use ($pharmacies) {
-            $handle = fopen('php://output', 'w');
-            fwrite($handle, "\xEF\xBB\xBF");
-
-            fputcsv($handle, [
-                'Kode Apotek',
-                'Nama Apotek',
-                'Kota',
-                'No. PO',
-                'Waktu Order',
-                'Pabrikan',
-                'SKU',
-                'Nama Produk',
-                'Satuan',
-                'Harga Satuan (Rp)',
-                'Qty',
-                'Subtotal (Rp)',
-            ]);
-
-            foreach ($pharmacies as $pharmacy) {
-                foreach ($pharmacy->orders as $order) {
-                    foreach ($order->items as $item) {
-                        fputcsv($handle, [
-                            $pharmacy->customer_code,
-                            $pharmacy->name,
-                            $pharmacy->city ?? '-',
-                            $order->order_number,
-                            $order->created_at->format('d/m/Y H:i:s'),
-                            $item->manufacturer_name ?? ($item->product?->manufacturer?->name ?? 'Lainnya'),
-                            $item->product?->sku ?? '-',
-                            $item->product_name,
-                            $item->product?->unit ?? 'box',
-                            number_format($item->price, 0, ',', '.'),
-                            $item->quantity,
-                            number_format($item->subtotal, 0, ',', '.'),
-                        ]);
-                    }
-                }
-            }
-
-            fclose($handle);
-        }, 'Rekap_Belanja_Seluruh_Apotek.csv', $headers);
+        return app(ReportExportService::class)->exportPharmacyOrders();
     }
 }

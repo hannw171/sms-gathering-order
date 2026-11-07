@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ReportPrintController;
 use App\Http\Controllers\Guest\AuthController as GuestAuthController;
 use App\Http\Controllers\Guest\CatalogController;
 use App\Http\Controllers\Guest\LeaderboardController;
@@ -43,6 +44,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Admin Report Print A4 & Per-Pharmacy Export Routes
+    Route::prefix('admin/reports')->name('admin.reports.')->group(function () {
+        Route::get('/reward-recap/print', [ReportPrintController::class, 'rewardRecap'])->name('reward-recap.print');
+        Route::get('/product-sales/print', [ReportPrintController::class, 'productSales'])->name('product-sales.print');
+        Route::get('/revenue/print', [ReportPrintController::class, 'revenue'])->name('revenue.print');
+        Route::get('/leaderboard/print', [ReportPrintController::class, 'leaderboard'])->name('leaderboard.print');
+        Route::get('/pharmacy-orders/print', [ReportPrintController::class, 'pharmacyOrders'])->name('pharmacy-orders.print');
+        Route::get('/pharmacy/{pharmacy}/print', [ReportPrintController::class, 'pharmacyDetail'])->name('pharmacy-detail.print');
+        Route::get('/pharmacy/{pharmacy}/excel', [ReportPrintController::class, 'pharmacyExcel'])->name('pharmacy-detail.excel');
+    });
 });
 
 require __DIR__.'/auth.php';

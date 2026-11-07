@@ -6,8 +6,8 @@ use App\Filament\Widgets\LeaderboardStatsWidget;
 use App\Models\Order;
 use App\Models\Pharmacy;
 use App\Services\GatheringService;
+use App\Services\ReportExportService;
 use BackedEnum;
-use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Pages\Page;
 use Filament\Support\Enums\FontFamily;
@@ -57,7 +57,7 @@ class LeaderboardReport extends Page implements HasTable
     {
         return [
             Action::make('exportCsv')
-                ->label('Download Excel / CSV')
+                ->label('Download Excel (.xlsx)')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('success')
                 ->action('exportCsv'),
@@ -65,7 +65,7 @@ class LeaderboardReport extends Page implements HasTable
                 ->label('Cetak Peringkat A4')
                 ->icon('heroicon-o-printer')
                 ->color('gray')
-                ->extraAttributes(['onclick' => 'window.print()']),
+                ->url(fn (): string => route('admin.reports.leaderboard.print'), shouldOpenInNewTab: true),
         ];
     }
 
@@ -203,52 +203,6 @@ class LeaderboardReport extends Page implements HasTable
 
     public function exportCsv(): StreamedResponse
     {
-        $gatheringService = app(GatheringService::class);
-        $leaderboard = $gatheringService->getLeaderboard();
-
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="Peringkat_Apotek_SMS_Gathering_'.now()->format('Ymd_His').'.csv"',
-        ];
-
-        return response()->streamDownload(function () use ($leaderboard) {
-            $handle = fopen('php://output', 'w');
-            fwrite($handle, "\xEF\xBB\xBF");
-
-            fputcsv($handle, [
-                'Peringkat',
-                'Kode Apotek',
-                'Nama Apotek / Klinik',
-                'Kota / Wilayah',
-                'Status Kehadiran',
-                'Waktu Check-In',
-                'Jumlah PO',
-                'Total Nominal Belanja (Rp)',
-                'Waktu Transaksi Pertama (Tie-Breaker)',
-                'Waktu Transaksi Terakhir',
-            ]);
-
-            foreach ($leaderboard as $item) {
-                $rankDisplay = $item['total_spending'] > 0 ? $item['rank'] : '-';
-                $firstOrderStr = $item['first_order_at'] ? Carbon::parse($item['first_order_at'])->format('d/m/Y H:i:s') : '-';
-                $lastOrderStr = $item['last_order_at'] ? Carbon::parse($item['last_order_at'])->format('d/m/Y H:i:s') : '-';
-                $checkinStr = $item['checked_in_at'] ? Carbon::parse($item['checked_in_at'])->format('d/m/Y H:i') : '-';
-
-                fputcsv($handle, [
-                    $rankDisplay,
-                    $item['customer_code'],
-                    $item['name'],
-                    $item['city'] ?? '-',
-                    $item['is_checked_in'] ? 'Hadir' : 'Belum Hadir',
-                    $checkinStr,
-                    $item['orders_count'],
-                    number_format($item['total_spending'], 0, ',', '.'),
-                    $firstOrderStr,
-                    $lastOrderStr,
-                ]);
-            }
-
-            fclose($handle);
-        }, 'Peringkat_Apotek_SMS_Gathering.csv', $headers);
+        return app(ReportExportService::class)->exportLeaderboard();
     }
 }

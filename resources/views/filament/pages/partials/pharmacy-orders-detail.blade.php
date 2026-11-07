@@ -46,12 +46,27 @@
                     <strong>{{ $pharmacy->customer_code }}</strong> &bull; {{ $pharmacy->city ?? '-' }} &bull; PIC: {{ $pharmacy->sales_pic ?? '-' }} &bull; Telp: {{ $pharmacy->phone ?? '-' }}
                 </div>
             </div>
-            <div>
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
                 @if($pharmacy->is_checked_in)
                     <x-filament::badge color="success">✓ Hadir di Gathering</x-filament::badge>
                 @else
                     <x-filament::badge color="gray">Belum Hadir</x-filament::badge>
                 @endif
+                <div style="display: flex; gap: 6px; margin-top: 2px;">
+                    <a
+                        href="{{ route('admin.reports.pharmacy-detail.excel', $pharmacy) }}"
+                        style="display: inline-flex; align-items: center; gap: 4px; background: #059669; color: #fff; font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 6px; text-decoration: none;"
+                    >
+                        📥 Excel (.xlsx)
+                    </a>
+                    <a
+                        href="{{ route('admin.reports.pharmacy-detail.print', $pharmacy) }}"
+                        target="_blank"
+                        style="display: inline-flex; align-items: center; gap: 4px; background: #1e293b; color: #f8fafc; border: 1px solid rgba(148, 163, 184, 0.3); font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 6px; text-decoration: none;"
+                    >
+                        🖨️ Cetak Berita Acara A4
+                    </a>
+                </div>
             </div>
         </div>
 

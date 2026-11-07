@@ -6,6 +6,7 @@ use App\Filament\Widgets\RevenueStatsWidget;
 use App\Models\Manufacturer;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Services\ReportExportService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Pages\Page;
@@ -52,7 +53,7 @@ class RevenueReport extends Page implements HasTable
     {
         return [
             Action::make('exportCsv')
-                ->label('Download Excel / CSV')
+                ->label('Download Excel (.xlsx)')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('success')
                 ->action('exportCsv'),
@@ -60,7 +61,7 @@ class RevenueReport extends Page implements HasTable
                 ->label('Cetak Laporan A4')
                 ->icon('heroicon-o-printer')
                 ->color('gray')
-                ->extraAttributes(['onclick' => 'window.print()']),
+                ->url(fn (): string => route('admin.reports.revenue.print'), shouldOpenInNewTab: true),
         ];
     }
 
@@ -136,57 +137,6 @@ class RevenueReport extends Page implements HasTable
 
     public function exportCsv(): StreamedResponse
     {
-        $mAggregates = OrderItem::query()
-            ->join('orders', 'order_items.order_id', '=', 'orders.id')
-            ->join('products', 'order_items.product_id', '=', 'products.id')
-            ->where('orders.status', '!=', 'cancelled')
-            ->selectRaw('products.manufacturer_id, COUNT(DISTINCT products.id) as sold_skus, SUM(order_items.quantity) as total_qty, SUM(order_items.subtotal) as total_revenue')
-            ->groupBy('products.manufacturer_id')
-            ->get()
-            ->keyBy('manufacturer_id');
-
-        $totalGMV = (float) Order::where('status', '!=', 'cancelled')->sum('total_amount');
-        $manufacturers = Manufacturer::withCount(['products' => fn ($q) => $q->where('is_active', true)])->get();
-
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="Rekap_Omset_Pabrikan_'.now()->format('Ymd_His').'.csv"',
-        ];
-
-        return response()->streamDownload(function () use ($manufacturers, $mAggregates, $totalGMV) {
-            $handle = fopen('php://output', 'w');
-            fwrite($handle, "\xEF\xBB\xBF");
-
-            fputcsv($handle, [
-                'No',
-                'Nama Pabrikan',
-                'Jumlah SKU Aktif',
-                'SKU Terjual',
-                'Total Volume Terjual (Box/Fls)',
-                'Total Omset Penjualan (Rp)',
-                'Kontribusi Omset (%)',
-            ]);
-
-            $no = 1;
-            foreach ($manufacturers as $m) {
-                $agg = $mAggregates->get($m->id);
-                $soldSkus = $agg ? (int) $agg->sold_skus : 0;
-                $qty = $agg ? (int) $agg->total_qty : 0;
-                $rev = $agg ? (float) $agg->total_revenue : 0.0;
-                $pct = $totalGMV > 0 ? (($rev / $totalGMV) * 100) : 0.0;
-
-                fputcsv($handle, [
-                    $no++,
-                    $m->name,
-                    $m->products_count,
-                    $soldSkus,
-                    $qty,
-                    number_format($rev, 0, ',', '.'),
-                    number_format($pct, 2, ',', '.').'%',
-                ]);
-            }
-
-            fclose($handle);
-        }, 'Rekap_Omset_Pabrikan.csv', $headers);
+        return app(ReportExportService::class)->exportRevenue();
     }
 }

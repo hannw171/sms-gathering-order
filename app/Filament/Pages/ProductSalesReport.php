@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Filament\Widgets\ProductSalesStatsWidget;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Services\ReportExportService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Pages\Page;
@@ -54,7 +55,7 @@ class ProductSalesReport extends Page implements HasTable
     {
         return [
             Action::make('exportCsv')
-                ->label('Download Excel / CSV')
+                ->label('Download Excel (.xlsx)')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('success')
                 ->action('exportCsv'),
@@ -62,7 +63,7 @@ class ProductSalesReport extends Page implements HasTable
                 ->label('Cetak Laporan A4')
                 ->icon('heroicon-o-printer')
                 ->color('gray')
-                ->extraAttributes(['onclick' => 'window.print()']),
+                ->url(fn (): string => route('admin.reports.product-sales.print'), shouldOpenInNewTab: true),
         ];
     }
 
@@ -155,55 +156,6 @@ class ProductSalesReport extends Page implements HasTable
 
     public function exportCsv(): StreamedResponse
     {
-        $salesAgg = OrderItem::query()
-            ->join('orders', 'order_items.order_id', '=', 'orders.id')
-            ->where('orders.status', '!=', 'cancelled')
-            ->selectRaw('order_items.product_id, SUM(order_items.quantity) as total_qty, SUM(order_items.subtotal) as total_revenue')
-            ->groupBy('order_items.product_id')
-            ->get()
-            ->keyBy('product_id');
-
-        $products = Product::with('manufacturer')->orderBy('manufacturer_id')->orderBy('name')->get();
-
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="Rekap_Produk_Terjual_'.now()->format('Ymd_His').'.csv"',
-        ];
-
-        return response()->streamDownload(function () use ($products, $salesAgg) {
-            $handle = fopen('php://output', 'w');
-            fwrite($handle, "\xEF\xBB\xBF");
-
-            fputcsv($handle, [
-                'No',
-                'SKU',
-                'Nama Produk',
-                'Pabrikan',
-                'Satuan',
-                'Harga Satuan (Rp)',
-                'Qty Terjual',
-                'Total Omset (Rp)',
-            ]);
-
-            $no = 1;
-            foreach ($products as $prod) {
-                $agg = $salesAgg->get($prod->id);
-                $qty = $agg ? (int) $agg->total_qty : 0;
-                $rev = $agg ? (float) $agg->total_revenue : 0.0;
-
-                fputcsv($handle, [
-                    $no++,
-                    $prod->sku,
-                    $prod->name,
-                    $prod->manufacturer?->name ?? '-',
-                    $prod->unit,
-                    number_format($prod->price, 0, ',', '.'),
-                    $qty,
-                    number_format($rev, 0, ',', '.'),
-                ]);
-            }
-
-            fclose($handle);
-        }, 'Rekap_Produk_Terjual.csv', $headers);
+        return app(ReportExportService::class)->exportProductSales();
     }
 }

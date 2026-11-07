@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Filament\Widgets\RewardRecapStatsWidget;
 use App\Models\Order;
 use App\Models\Pharmacy;
+use App\Services\ReportExportService;
 use App\Services\RewardCalculationService;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -59,7 +60,7 @@ class RewardRecapReport extends Page implements HasTable
     {
         return [
             Action::make('exportCsv')
-                ->label('Download Excel / CSV')
+                ->label('Download Excel (.xlsx)')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('success')
                 ->action('exportCsv'),
@@ -67,7 +68,7 @@ class RewardRecapReport extends Page implements HasTable
                 ->label('Cetak Rekapan A4')
                 ->icon('heroicon-o-printer')
                 ->color('gray')
-                ->extraAttributes(['onclick' => 'window.print()']),
+                ->url(fn (): string => route('admin.reports.reward-recap.print'), shouldOpenInNewTab: true),
         ];
     }
 
@@ -229,6 +230,14 @@ class RewardRecapReport extends Page implements HasTable
                             ->warning()
                             ->send();
                     }),
+
+                Action::make('printHandover')
+                    ->label('Cetak BA A4')
+                    ->icon('heroicon-o-printer')
+                    ->color('gray')
+                    ->button()
+                    ->size('xs')
+                    ->url(fn (Pharmacy $record): string => route('admin.reports.pharmacy-detail.print', $record), shouldOpenInNewTab: true),
             ])
             ->filters([
                 Filter::make('has_reward')
@@ -252,80 +261,6 @@ class RewardRecapReport extends Page implements HasTable
 
     public function exportCsv(): StreamedResponse
     {
-        $rewardService = app(RewardCalculationService::class);
-        $summaries = $rewardService->getAllPharmaciesRewardsSummary();
-
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="Rekap_Hadiah_SMS_Gathering_'.now()->format('Ymd_His').'.csv"',
-        ];
-
-        return response()->streamDownload(function () use ($summaries) {
-            $handle = fopen('php://output', 'w');
-            fwrite($handle, "\xEF\xBB\xBF");
-
-            fputcsv($handle, [
-                'No',
-                'Kode Apotek',
-                'Nama Apotek / Klinik',
-                'Kota',
-                'Total Belanja (Rp)',
-                'Jumlah Order (PO)',
-                'Hadiah Langsung',
-                'Hadiah Pilihan Terpilih',
-                'Breakdown Voucher',
-                'Total Voucher (Rp)',
-                'Status Serah Terima',
-                'Waktu Serah Terima',
-                'Nama Penerima',
-                'Catatan',
-            ]);
-
-            $no = 1;
-            foreach ($summaries as $item) {
-                $pharmacy = $item['pharmacy'];
-                $rewards = $item['rewards'];
-
-                $physicalList = [];
-                foreach (($rewards['physical_rewards'] ?? []) as $giftName => $qty) {
-                    $physicalList[] = is_numeric($giftName) ? (string) $qty : "{$giftName}: {$qty} pcs";
-                }
-                $physicalStr = implode('; ', $physicalList);
-
-                $choicesList = [];
-                foreach (($rewards['choice_selections'] ?? []) as $cs) {
-                    $choicesList[] = ($cs['manufacturer_slug'] ?? '').': '.($cs['selected_option'] ?? '');
-                }
-                $choiceStr = implode('; ', $choicesList);
-
-                $voucherList = [];
-                foreach (($rewards['voucher_breakdown'] ?? []) as $slug => $nom) {
-                    $voucherList[] = strtoupper($slug).': Rp '.number_format($nom, 0, ',', '.');
-                }
-                $voucherBreakdownStr = implode('; ', $voucherList);
-
-                $statusStr = $item['is_handed_over'] ? 'Sudah Diserahkan' : 'Belum Diserahkan';
-                $handedAtStr = $item['handed_over_at'] ? $item['handed_over_at']->format('d/m/Y H:i') : '-';
-
-                fputcsv($handle, [
-                    $no++,
-                    $pharmacy->customer_code,
-                    $pharmacy->name,
-                    $pharmacy->city ?? '-',
-                    number_format($item['total_spending'], 0, ',', '.'),
-                    $item['order_count'],
-                    $physicalStr ?: '-',
-                    $choiceStr ?: '-',
-                    $voucherBreakdownStr ?: '-',
-                    number_format($rewards['vouchers'] ?? 0, 0, ',', '.'),
-                    $statusStr,
-                    $handedAtStr,
-                    $item['receiver_name'] ?: '-',
-                    $item['handover_notes'] ?: '-',
-                ]);
-            }
-
-            fclose($handle);
-        }, 'Rekap_Hadiah_SMS_Gathering.csv', $headers);
+        return app(ReportExportService::class)->exportRewardRecap();
     }
 }
