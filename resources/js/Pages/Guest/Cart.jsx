@@ -528,8 +528,8 @@ export default function Cart({
               </div>
             )}
 
-            {/* Ordering Closed / Scheduled Notice Banner */}
-            {event?.is_ordering_open === false && (
+            {/* Ordering Closed / Scheduled Notice Banner (Only when ALL manufacturers are closed) */}
+            {event?.is_ordering_open === false && (manufacturers || []).every((m) => m.is_ordering_open === false) && (
               <div className="bg-amber-50 border border-amber-300 rounded-2xl p-3.5 flex items-start gap-2.5 text-xs text-amber-900 shadow-xs">
                 <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <div>
@@ -555,22 +555,13 @@ export default function Cart({
             <button
               type="button"
               onClick={() => setShowConfirmModal(true)}
-              disabled={isSubmitting || totalItems === 0 || event?.is_ordering_open === false || closedCartItems.length > 0}
+              disabled={isSubmitting || totalItems === 0 || closedCartItems.length > 0}
               className="w-full bg-brand-600 hover:bg-brand-700 active:bg-brand-800 disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-2xl shadow-floating flex items-center justify-center gap-2 text-sm transition-all"
             >
               {closedCartItems.length > 0 ? (
                 <>
                   <Lock className="w-4 h-4" />
                   <span>Ada Produk Sesi Ditutup ({closedCartItems.length})</span>
-                </>
-              ) : event?.is_ordering_open === false ? (
-                <>
-                  <Lock className="w-4 h-4" />
-                  <span>
-                    {event?.ordering_status === 'scheduled'
-                      ? 'Menunggu Sesi PO Dibuka'
-                      : 'Sesi Pemesanan Ditutup'}
-                  </span>
                 </>
               ) : (
                 <>

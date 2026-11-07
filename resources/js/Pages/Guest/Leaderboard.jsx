@@ -457,7 +457,7 @@ export default function Leaderboard({
 
       {/* Sticky Bottom My Rank Highlight */}
       {currentPharmacy && (
-        <div className="fixed sm:absolute bottom-16 left-0 right-0 max-w-guest mx-auto px-4 z-40">
+        <div className="fixed sm:absolute bottom-16 left-0 right-0 max-w-guest mx-auto p-4 z-40">
           <div className="bg-brand-900/95 backdrop-blur-md text-white p-3.5 px-4 rounded-2xl shadow-floating flex items-center justify-between border border-brand-700/50">
             <div className="flex items-center gap-3 min-w-0 pr-2">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-400 to-amber-300 text-slate-950 font-black text-xs flex items-center justify-center shadow-sm shrink-0">

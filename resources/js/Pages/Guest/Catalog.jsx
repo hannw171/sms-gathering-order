@@ -21,7 +21,7 @@ export default function Catalog({
   const { cart, totalItems, totalAmount, getItemQuantity, updateQuantity } = useCart();
 
   const activeM = (manufacturers || []).find((m) => m.slug === selectedManufacturer);
-  const isGlobalClosed = event?.is_ordering_open === false;
+  const hasAnyOpenManufacturer = (manufacturers || []).some((m) => m.is_ordering_open);
   const [mCountdown, setMCountdown] = useState(() => formatCountdown(activeM?.session_end_at));
 
   useEffect(() => {
@@ -170,16 +170,16 @@ export default function Catalog({
         </div>
       </div>
 
-      {/* Sesi PO Inactive Notice Banner */}
-      {event?.is_ordering_open === false && (
+      {/* Sesi PO Inactive Notice Banner - Only shown when ALL manufacturers are closed */}
+      {!hasAnyOpenManufacturer && (
         <div className="mx-3.5 mb-2 bg-amber-50 border border-amber-200/90 rounded-2xl p-3 flex items-center gap-2.5 text-xs text-amber-900 shadow-xs">
           <Clock className="w-4 h-4 text-amber-600 shrink-0" />
           <span className="text-[11px] font-medium leading-tight">
             {event?.ordering_status === 'scheduled'
-              ? 'Sesi Pemesanan belum dibuka. Anda dapat memilih produk & menyiapkan keranjang terlebih dahulu.'
+              ? 'Sesi Pemesanan belum dibuka. Anda dapat melihat produk & menyiapkan keranjang terlebih dahulu.'
               : event?.ordering_status === 'ended'
               ? 'Sesi Pemesanan gathering telah berakhir.'
-              : 'Sesi Pemesanan sedang ditutup sementara oleh panitia.'}
+              : 'Sesi Pemesanan sedang ditutup sementara oleh panitia. Menunggu sesi pabrikan dibuka.'}
           </span>
         </div>
       )}
@@ -302,8 +302,7 @@ export default function Catalog({
         ) : (
           products.map((product) => {
             const qty = getItemQuantity(product.id);
-            const isMClosed = product.manufacturer && product.manufacturer.is_ordering_open === false;
-            const isProductOrderDisabled = isGlobalClosed || isMClosed;
+            const isProductOrderDisabled = product.manufacturer ? product.manufacturer.is_ordering_open === false : false;
 
             return (
               <div

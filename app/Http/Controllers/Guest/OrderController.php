@@ -73,13 +73,8 @@ class OrderController extends Controller
         $pharmacy = Pharmacy::findOrFail($pharmacyId);
 
         $eventSetting = EventSetting::current();
-        if (! $eventSetting->isOrderingOpen()) {
-            $status = $eventSetting->getOrderingStatus();
-            $msg = match ($status) {
-                'scheduled' => 'Sesi pemesanan belum dimulai (akan dimulai pukul '.($eventSetting->session_start_at?->format('H:i') ?? '-').' WIB).',
-                'ended' => 'Sesi pemesanan gathering telah berakhir.',
-                default => 'Sesi pemesanan sedang ditutup oleh panitia.',
-            };
+        if ($eventSetting->session_start_at && now()->lt($eventSetting->session_start_at)) {
+            $msg = 'Sesi pemesanan belum dimulai (akan dimulai pukul '.$eventSetting->session_start_at->format('H:i').' WIB).';
 
             return back()->withErrors(['error' => $msg]);
         }

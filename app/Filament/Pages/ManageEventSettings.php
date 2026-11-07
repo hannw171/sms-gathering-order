@@ -289,6 +289,10 @@ class ManageEventSettings extends Page
                         'session_end_at' => $endAt,
                     ]);
 
+                    EventSetting::current()->update([
+                        'is_ordering_active' => true,
+                    ]);
+
                     Notification::make()
                         ->success()
                         ->title('Sesi Pabrikan Berhasil Diatur!')
@@ -307,6 +311,10 @@ class ManageEventSettings extends Page
                     Manufacturer::query()->update([
                         'is_ordering_active' => true,
                         'session_end_at' => null,
+                    ]);
+
+                    EventSetting::current()->update([
+                        'is_ordering_active' => true,
                     ]);
 
                     Notification::make()
@@ -352,6 +360,10 @@ class ManageEventSettings extends Page
             'session_end_at' => $endAt,
         ]);
 
+        EventSetting::current()->update([
+            'is_ordering_active' => true,
+        ]);
+
         Notification::make()
             ->success()
             ->title("Sesi {$m->name} Dibuka ({$minutes} Menit)!")
@@ -365,6 +377,10 @@ class ManageEventSettings extends Page
         $m->update([
             'is_ordering_active' => true,
             'session_end_at' => null,
+        ]);
+
+        EventSetting::current()->update([
+            'is_ordering_active' => true,
         ]);
 
         Notification::make()
