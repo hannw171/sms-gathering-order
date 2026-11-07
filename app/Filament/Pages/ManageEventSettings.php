@@ -92,12 +92,17 @@ class ManageEventSettings extends Page
                         Grid::make(2)
                             ->schema([
                                 TextInput::make('registration_schedule')
-                                    ->label('Jadwal Meja Registrasi')
+                                    ->label('Jadwal Meja Registrasi (Opsional)')
                                     ->placeholder('Contoh: Meja Registrasi Buka: 08:30 – 13:00 WIB')
-                                    ->helperText('Tampil pada banner kuning di halaman masuk tamu.'),
+                                    ->helperText('Kosongkan atau isi "-" jika tidak ingin menampilkan banner kuning di halaman masuk tamu.')
+                                    ->nullable()
+                                    ->maxLength(255),
                                 TextInput::make('registration_help_note')
-                                    ->label('Catatan Bantuan Registrasi')
-                                    ->placeholder('Contoh: PIC Meja Bantuan siap melayani pencarian manual ID di Area Foyer Ballroom.'),
+                                    ->label('Catatan Bantuan Registrasi (Opsional)')
+                                    ->placeholder('Contoh: PIC Meja Bantuan siap melayani pencarian manual ID di Area Foyer Ballroom.')
+                                    ->helperText('Kosongkan atau isi "-" jika tidak ingin menampilkan catatan ini.')
+                                    ->nullable()
+                                    ->maxLength(255),
                             ]),
                     ]),
 

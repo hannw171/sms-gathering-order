@@ -49,6 +49,13 @@ export default function Onboarding({ event, samplePharmacies }) {
   const serverConflictData = flash?.conflictData;
   const hasServerConflict = !!flash?.conflict;
 
+  // Check registration schedule & help note banner visibility
+  const cleanSchedule = (event?.registration_schedule || '').trim();
+  const isScheduleValid = cleanSchedule !== '' && cleanSchedule !== '-';
+  const cleanHelpNote = (event?.registration_help_note || '').trim();
+  const isHelpNoteValid = cleanHelpNote !== '' && cleanHelpNote !== '-';
+  const hasRegistrationBanner = isScheduleValid || isHelpNoteValid;
+
   // Check if not found returned from server session
   const hasNotFoundInProps = !!flash?.notFound || (errors?.customer_code && !hasServerConflict);
   const isNotFound = (isDemoNotFoundOpen || hasNotFoundInProps) && !dismissNotFound;
@@ -400,19 +407,25 @@ export default function Onboarding({ event, samplePharmacies }) {
           </div>
 
           {/* Helpful On-ground Support Banner (Figma node 1:67 - Gold/Amber theme) */}
-          <div className="bg-[rgba(254,243,199,0.7)] border border-[rgba(253,230,138,0.8)] rounded-[12px] p-3.5 flex items-center gap-3 shadow-xs mb-4">
-            <div className="w-9 h-9 rounded-full bg-[rgba(252,211,77,0.6)] flex items-center justify-center text-amber-900 shrink-0">
-              <Clock className="w-4 h-4" />
+          {hasRegistrationBanner && (
+            <div className="bg-[rgba(254,243,199,0.7)] border border-[rgba(253,230,138,0.8)] rounded-[12px] p-3.5 flex items-center gap-3 shadow-xs mb-4">
+              <div className="w-9 h-9 rounded-full bg-[rgba(252,211,77,0.6)] flex items-center justify-center text-amber-900 shrink-0">
+                <Clock className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                {isScheduleValid && (
+                  <h4 className="text-[13px] font-semibold text-[#131B2E]">
+                    {cleanSchedule}
+                  </h4>
+                )}
+                {isHelpNoteValid && (
+                  <p className="text-[11px] text-[#424752] leading-[16px]">
+                    {cleanHelpNote}
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="text-[13px] font-semibold text-[#131B2E]">
-                {event?.registration_schedule || 'Meja Registrasi Buka: 08:30 – 13:00 WIB'}
-              </h4>
-              <p className="text-[11px] text-[#424752] leading-[16px]">
-                {event?.registration_help_note || 'PIC Meja Bantuan siap melayani pencarian manual ID di Area Foyer Ballroom.'}
-              </p>
-            </div>
-          </div>
+          )}
 
           {/* Interactive Screen State Switchers for Instant Review (Only visible in Local / Development) */}
           {isDev && (
