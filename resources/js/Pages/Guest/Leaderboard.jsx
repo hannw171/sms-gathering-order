@@ -27,14 +27,13 @@ export default function Leaderboard({
   myStandings,
   event,
 }) {
-  const [countdown, setCountdown] = useState(() => formatCountdown(event?.session_end_at));
-
   // Auto-poll leaderboard every 5 seconds for real-time ranking updates
   usePoll(5000, {
     only: [
       'leaderboard',
       'leaderboards_by_manufacturer',
       'stats_by_manufacturer',
+      'manufacturers',
       'myStandings',
       'currentMilestone',
       'event',
@@ -52,12 +51,99 @@ export default function Leaderboard({
 
   const [activeTab, setActiveTab] = useState(resolveInitialTab);
 
+  // Dynamic session resolution (per-manufacturer, multi-manufacturer, or overall)
+  const resolveCurrentSessionInfo = () => {
+    if (activeTab !== 'all') {
+      const curM = (manufacturers || []).find((m) => m.id === activeTab);
+      if (!curM || curM.is_ordering_open === false) {
+        return {
+          label: 'Sesi PO:',
+          text: '00:00:00',
+          subtext: 'Ditutup',
+          colorClass: 'text-rose-600',
+          isLive: false,
+        };
+      }
+      if (curM.session_end_at) {
+        const remaining = formatCountdown(curM.session_end_at);
+        const isExpired = remaining === '00:00:00';
+        return {
+          label: 'Sesi PO:',
+          text: remaining,
+          subtext: isExpired ? 'Selesai' : null,
+          colorClass: isExpired ? 'text-slate-500' : 'text-amber-600',
+          isLive: !isExpired,
+        };
+      }
+      return {
+        label: 'Sesi PO:',
+        text: 'Buka Penuh',
+        subtext: null,
+        colorClass: 'text-emerald-600',
+        isLive: true,
+      };
+    }
+
+    // Overall Tab
+    const openMs = (manufacturers || []).filter((m) => m.is_ordering_open);
+    const timedMs = openMs.filter(
+      (m) => m.session_end_at && new Date(m.session_end_at) > new Date()
+    );
+
+    if (timedMs.length > 0) {
+      const latestM = timedMs.reduce((prev, cur) =>
+        new Date(cur.session_end_at) > new Date(prev.session_end_at) ? cur : prev
+      );
+      const remaining = formatCountdown(latestM.session_end_at);
+      const isSingleFlash = timedMs.length === 1;
+
+      return {
+        label: isSingleFlash ? `Sesi ${latestM.name.replace(/^PT\.\s*/i, '')}:` : 'Sesi PO Aktif:',
+        text: remaining,
+        subtext: timedMs.length > 1 ? `(${timedMs.length} Pabrik)` : null,
+        colorClass: 'text-amber-600',
+        isLive: true,
+      };
+    }
+
+    if (openMs.length > 0) {
+      return {
+        label: 'Sesi PO:',
+        text: 'Buka Penuh',
+        subtext: `(${openMs.length} Pabrik)`,
+        colorClass: 'text-emerald-600',
+        isLive: true,
+      };
+    }
+
+    if (event?.session_end_at && new Date(event.session_end_at) > new Date()) {
+      return {
+        label: 'Sesi PO:',
+        text: formatCountdown(event.session_end_at),
+        subtext: null,
+        colorClass: 'text-slate-900',
+        isLive: true,
+      };
+    }
+
+    return {
+      label: 'Sesi PO:',
+      text: '00:00:00',
+      subtext: 'Ditutup',
+      colorClass: 'text-slate-400',
+      isLive: false,
+    };
+  };
+
+  const [sessionInfo, setSessionInfo] = useState(resolveCurrentSessionInfo);
+
   useEffect(() => {
+    setSessionInfo(resolveCurrentSessionInfo());
     const timer = setInterval(() => {
-      setCountdown(formatCountdown(event?.session_end_at));
+      setSessionInfo(resolveCurrentSessionInfo());
     }, 1000);
     return () => clearInterval(timer);
-  }, [event?.session_end_at]);
+  }, [activeTab, manufacturers, event?.session_end_at]);
 
   // Tab definitions: [Overall, ...Manufacturers]
   const tabs = [
@@ -66,6 +152,8 @@ export default function Leaderboard({
       id: m.id,
       name: m.name,
       slug: m.slug,
+      is_ordering_open: m.is_ordering_open,
+      session_end_at: m.session_end_at,
       isOverall: false,
     })),
   ];
@@ -105,18 +193,21 @@ export default function Leaderboard({
         <div className="bg-white rounded-2xl p-2.5 px-3.5 flex items-center justify-between border border-slate-200/90 shadow-xs">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${sessionInfo.isLive ? 'bg-emerald-400' : 'bg-slate-400'} opacity-75`} />
+              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${sessionInfo.isLive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
             </span>
-            <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">
+            <span className={`text-[11px] font-bold ${sessionInfo.isLive ? 'text-emerald-700' : 'text-slate-500'} uppercase tracking-wider`}>
               LIVE TRACKING • AUTO-UPDATE
             </span>
           </div>
 
           <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
-            <Clock className="w-3.5 h-3.5 text-brand-600" />
-            <span>Sesi PO:</span>
-            <span className="font-bold text-slate-900 font-mono">{countdown}</span>
+            <Clock className={`w-3.5 h-3.5 ${sessionInfo.isLive ? 'text-amber-600' : 'text-slate-400'}`} />
+            <span className="truncate max-w-[120px]">{sessionInfo.label}</span>
+            <span className={`font-bold font-mono ${sessionInfo.colorClass}`}>{sessionInfo.text}</span>
+            {sessionInfo.subtext && (
+              <span className="text-[10px] text-slate-400 font-semibold">{sessionInfo.subtext}</span>
+            )}
           </div>
         </div>
       </div>
@@ -252,7 +343,19 @@ export default function Leaderboard({
                       <span>Semua Pabrik</span>
                     </>
                   ) : (
-                    <span>{tab.name}</span>
+                    <>
+                      <span>{tab.name}</span>
+                      {tab.is_ordering_open === false && (
+                        <span className="text-[9px] bg-rose-100 text-rose-700 px-1 py-0.2 rounded font-bold">
+                          Tutup
+                        </span>
+                      )}
+                      {tab.is_ordering_open && tab.session_end_at && (
+                        <span className="text-[9px] bg-amber-100 text-amber-800 px-1 py-0.2 rounded font-bold">
+                          ⚡
+                        </span>
+                      )}
+                    </>
                   )}
                 </button>
               );

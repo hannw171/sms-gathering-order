@@ -38,10 +38,77 @@ export default function StageLeaderboard({
   const [isAutoRotate, setIsAutoRotate] = useState(true);
   const [slideSecondsLeft, setSlideSecondsLeft] = useState(SLIDE_DURATION_SECONDS);
 
+  // Dynamic session resolution (per-manufacturer, multi-manufacturer, or overall)
+  const resolveCurrentSessionInfo = () => {
+    if (activeTab !== 'all') {
+      const curM = (manufacturers || []).find((m) => m.id === activeTab);
+      if (!curM || curM.is_ordering_open === false) {
+        return {
+          label: 'Sesi Ditutup',
+          text: '00:00:00',
+        };
+      }
+      if (curM.session_end_at) {
+        return {
+          label: `Sesi ${curM.name.replace(/^PT\.\s*/i, '')}`,
+          text: formatCountdown(curM.session_end_at),
+        };
+      }
+      return {
+        label: 'Sesi PO',
+        text: 'Buka Penuh',
+      };
+    }
+
+    // Overall
+    const openMs = (manufacturers || []).filter((m) => m.is_ordering_open);
+    const timedMs = openMs.filter(
+      (m) => m.session_end_at && new Date(m.session_end_at) > new Date()
+    );
+
+    if (timedMs.length > 0) {
+      const latestM = timedMs.reduce((prev, cur) =>
+        new Date(cur.session_end_at) > new Date(prev.session_end_at) ? cur : prev
+      );
+      return {
+        label: timedMs.length === 1 ? `Sesi ${latestM.name.replace(/^PT\.\s*/i, '')}` : 'Sesi PO Berakhir',
+        text: formatCountdown(latestM.session_end_at),
+      };
+    }
+
+    if (openMs.length > 0) {
+      return {
+        label: 'Sesi PO',
+        text: 'Buka Penuh',
+      };
+    }
+
+    if (event?.session_end_at && new Date(event.session_end_at) > new Date()) {
+      return {
+        label: 'Sesi PO Berakhir',
+        text: formatCountdown(event.session_end_at),
+      };
+    }
+
+    return {
+      label: 'Sesi PO',
+      text: '00:00:00',
+    };
+  };
+
+  const [sessionInfo, setSessionInfo] = useState(resolveCurrentSessionInfo);
+
   // Tabs list: [Overall, ...Manufacturers]
   const tabs = [
     { id: 'all', name: 'Semua Pabrik (Overall)', isOverall: true },
-    ...(manufacturers || []).map((m) => ({ id: m.id, name: m.name, slug: m.slug, isOverall: false })),
+    ...(manufacturers || []).map((m) => ({
+      id: m.id,
+      name: m.name,
+      slug: m.slug,
+      is_ordering_open: m.is_ordering_open,
+      session_end_at: m.session_end_at,
+      isOverall: false,
+    })),
   ];
 
   // Ref to hold current state for interval callbacks
@@ -50,13 +117,14 @@ export default function StageLeaderboard({
   const isAutoRotateRef = useRef(isAutoRotate);
   isAutoRotateRef.current = isAutoRotate;
 
-  // Countdown timer effect (session end)
+  // Countdown timer effect
   useEffect(() => {
+    setSessionInfo(resolveCurrentSessionInfo());
     const timer = setInterval(() => {
-      setCountdown(formatCountdown(event?.session_end_at));
+      setSessionInfo(resolveCurrentSessionInfo());
     }, 1000);
     return () => clearInterval(timer);
-  }, [event?.session_end_at]);
+  }, [activeTab, manufacturers, event?.session_end_at]);
 
   // Auto-rotate Carousel effect (15s per category)
   useEffect(() => {
@@ -180,10 +248,10 @@ export default function StageLeaderboard({
             <div className="absolute top-0 right-0 -mr-4 -mt-4 w-16 h-16 bg-amber-400/20 rounded-full blur-xl pointer-events-none" />
             <span className="text-[10px] lg:text-xs text-brand-100 block font-bold tracking-widest uppercase flex items-center justify-center gap-1.5 relative z-10">
               <Clock className="w-3.5 h-3.5 text-amber-300" />
-              <span>Sesi PO Berakhir</span>
+              <span>{sessionInfo.label}</span>
             </span>
             <span className="text-2xl lg:text-3xl font-black text-amber-300 font-mono tracking-wider relative z-10">
-              {countdown}
+              {sessionInfo.text}
             </span>
           </div>
         </div>

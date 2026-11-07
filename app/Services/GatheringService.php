@@ -81,7 +81,7 @@ class GatheringService
     {
         $manufacturers = Manufacturer::where('is_active', true)
             ->orderBy('sort_order')
-            ->get(['id', 'name', 'slug']);
+            ->get();
 
         $pharmacies = Pharmacy::with(['orders' => function ($q) {
             $q->where('status', '!=', 'cancelled')
