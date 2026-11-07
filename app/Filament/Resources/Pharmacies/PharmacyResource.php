@@ -13,12 +13,23 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class PharmacyResource extends Resource
 {
     protected static ?string $model = Pharmacy::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingOffice2;
+
+    protected static ?string $navigationLabel = 'Apotek & Klinik';
+
+    protected static ?string $modelLabel = 'Apotek & Klinik';
+
+    protected static ?string $pluralModelLabel = 'Apotek & Klinik';
+
+    protected static UnitEnum|string|null $navigationGroup = 'Master Data';
+
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $recordTitleAttribute = 'name';
 

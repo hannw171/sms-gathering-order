@@ -117,7 +117,6 @@ class OrderController extends Controller
                 'status' => 'confirmed',
                 'notes' => $request->notes,
                 'reward_selections' => $request->reward_selections,
-                'ip_address' => $request->ip(),
             ]);
 
             foreach ($orderItemsData as $itemData) {

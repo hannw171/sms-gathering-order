@@ -564,17 +564,44 @@ class RewardCalculationService
         ];
 
         foreach ($selectedChoices as $sel) {
-            if (! empty($sel['interbat'])) {
-                $userChosenOptions['interbat'][] = $sel['interbat'];
+            if (! is_array($sel)) {
+                continue;
             }
-            if (! empty($sel['graha_neo'])) {
-                $userChosenOptions['graha_neo'][] = $sel['graha_neo'];
-            }
-            if (! empty($sel['exeltis_lanso'])) {
-                $userChosenOptions['exeltis_lanso'][] = $sel['exeltis_lanso'];
-            }
-            if (! empty($sel['exeltis_sucra'])) {
-                $userChosenOptions['exeltis_sucra'][] = $sel['exeltis_sucra'];
+
+            foreach ($sel as $k => $val) {
+                $kLower = strtolower((string) $k);
+
+                if (str_starts_with($kLower, 'interbat')) {
+                    if (is_array($val)) {
+                        foreach ($val as $item) {
+                            if (! empty($item) && is_string($item)) {
+                                $userChosenOptions['interbat'][] = $item;
+                            }
+                        }
+                    } elseif (is_string($val) && ! empty($val)) {
+                        $userChosenOptions['interbat'][] = $val;
+                    }
+                } elseif (str_starts_with($kLower, 'graha_neo') || str_starts_with($kLower, 'neo_protifed')) {
+                    if (is_array($val)) {
+                        foreach ($val as $item) {
+                            if (! empty($item) && is_string($item)) {
+                                $userChosenOptions['graha_neo'][] = $item;
+                            }
+                        }
+                    } elseif (is_string($val) && ! empty($val)) {
+                        $userChosenOptions['graha_neo'][] = $val;
+                    }
+                } elseif (str_contains($kLower, 'lanso')) {
+                    $item = is_array($val) ? ($val[0] ?? null) : $val;
+                    if (! empty($item) && is_string($item)) {
+                        $userChosenOptions['exeltis_lanso'][] = $item;
+                    }
+                } elseif (str_contains($kLower, 'sucra')) {
+                    $item = is_array($val) ? ($val[0] ?? null) : $val;
+                    if (! empty($item) && is_string($item)) {
+                        $userChosenOptions['exeltis_sucra'][] = $item;
+                    }
+                }
             }
         }
 

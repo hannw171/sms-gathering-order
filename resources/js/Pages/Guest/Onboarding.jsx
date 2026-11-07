@@ -123,7 +123,7 @@ export default function Onboarding({ event, samplePharmacies }) {
             <div className="flex items-center justify-between mb-3">
               <div className="inline-flex items-center gap-1.5 bg-[#E2E7FF] text-[#00468C] px-3 py-1 rounded-full text-[11px] font-medium tracking-[0.22px]">
                 <Building2 className="w-3.5 h-3.5 text-[#00468C]" />
-                <span>PBF Sehat Medika Bersama</span>
+                <span>PT. Satria Medika Sejahtera</span>
               </div>
               <div className="inline-flex items-center gap-1 bg-[#FEF3C7] text-[#131B2E] px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-[0.22px]">
                 <span>🏆</span>
@@ -135,7 +135,7 @@ export default function Onboarding({ event, samplePharmacies }) {
               Annual Partner Gathering 2026
             </h1>
             <p className="text-[14px] text-[#565E74] leading-[20px] mb-2.5">
-              PBF Sehat Medika Bersama
+              PT. Satria Medika Sejahtera
             </p>
 
             <div className="inline-flex items-center gap-1.5 bg-[#E2E7FF] text-[#1565C0] rounded-full px-3 py-1.5 text-[12px] font-semibold tracking-[0.12px]">
@@ -425,7 +425,7 @@ export default function Onboarding({ event, samplePharmacies }) {
         {/* Footer (Figma node 1:150) */}
         <footer className="p-4 text-center border-t border-slate-200">
           <p className="text-[11px] text-[#64748B]">
-            Data sesi dilindungi protokol enkripsi PBF Sehat Medika Bersama.
+            Data sesi dilindungi protokol enkripsi PT. Satria Medika Sejahtera.
           </p>
         </footer>
 

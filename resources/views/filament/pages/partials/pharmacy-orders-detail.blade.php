@@ -8,7 +8,11 @@
     $allItems = $orders->flatMap->items;
     $itemsByManufacturer = $allItems->groupBy(function ($item) {
         return $item->manufacturer_name ?? ($item->product?->manufacturer?->name ?? 'Pabrikan Lainnya');
-    })->map(function ($items, $mName) {
+    })->map(function ($items, $mName) use ($rewards) {
+        $first = $items->first();
+        $mSlug = $first->product?->manufacturer?->slug ?? \Illuminate\Support\Str::slug($mName);
+        $mVoucher = (float) ($rewards['vouchers_by_manufacturer'][$mSlug] ?? ($rewards['details'][$mSlug]['vouchers'] ?? 0));
+
         $aggregated = $items->groupBy('product_name')->map(function ($prodItems) {
             $first = $prodItems->first();
             return [
@@ -23,6 +27,8 @@
 
         return [
             'manufacturer_name' => $mName,
+            'manufacturer_slug' => $mSlug,
+            'voucher' => $mVoucher,
             'items' => $aggregated,
             'subtotal' => (float) $items->sum('subtotal'),
             'total_qty' => (int) $items->sum('quantity'),
@@ -74,14 +80,22 @@
         </div>
 
         {{-- Rewards Row --}}
-        @if(!empty($rewards['physical_rewards']) || !empty($rewards['choice_selections']))
+        @php
+            $voucherBreakdown = $rewards['vouchers_by_manufacturer'] ?? [];
+        @endphp
+        @if(!empty($rewards['physical_rewards']) || !empty($rewards['choice_selections']) || !empty($voucherBreakdown))
             <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(148, 163, 184, 0.3); display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
-                <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #f59e0b; margin-right: 4px;">Hadiah:</span>
+                <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #f59e0b; margin-right: 4px;">Hadiah & Voucher:</span>
                 @foreach(($rewards['physical_rewards'] ?? []) as $giftName => $qty)
                     <x-filament::badge color="warning">🎁 {{ is_numeric($giftName) ? $qty : $giftName . ': ' . $qty . ' pcs' }}</x-filament::badge>
                 @endforeach
                 @foreach(($rewards['choice_selections'] ?? []) as $cs)
                     <x-filament::badge color="info">✨ {{ $cs['selected_option'] ?? '' }} ({{ $cs['manufacturer_slug'] ?? '' }})</x-filament::badge>
+                @endforeach
+                @foreach($voucherBreakdown as $slug => $vAmt)
+                    @if($vAmt > 0)
+                        <x-filament::badge color="success">🎟️ Voucher {{ ucwords(str_replace('-', ' ', $slug)) }}: Rp {{ number_format($vAmt, 0, ',', '.') }}</x-filament::badge>
+                    @endif
                 @endforeach
             </div>
         @endif
@@ -97,13 +111,18 @@
             @foreach($itemsByManufacturer as $mGroup)
                 <div style="border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 10px; overflow: hidden; margin-bottom: 12px;">
                     {{-- Pabrikan Header --}}
-                    <div style="background: rgba(148, 163, 184, 0.08); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(148, 163, 184, 0.15);">
+                    <div style="background: rgba(148, 163, 184, 0.08); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(148, 163, 184, 0.15); flex-wrap: wrap; gap: 8px;">
                         <span style="font-weight: 700; font-size: 12px; text-transform: uppercase;">
                             🏢 {{ $mGroup['manufacturer_name'] }}
                         </span>
-                        <div style="font-size: 12px;">
-                            <span style="color: #94a3b8; margin-right: 12px;">Volume: <strong>{{ number_format($mGroup['total_qty'], 0, ',', '.') }}</strong></span>
+                        <div style="font-size: 12px; display: flex; align-items: center; gap: 10px;">
+                            <span style="color: #94a3b8;">Volume: <strong>{{ number_format($mGroup['total_qty'], 0, ',', '.') }}</strong></span>
                             <strong style="color: #10b981;">Rp {{ number_format($mGroup['subtotal'], 0, ',', '.') }}</strong>
+                            @if(($mGroup['voucher'] ?? 0) > 0)
+                                <x-filament::badge color="success">
+                                    🎟️ Voucher: Rp {{ number_format($mGroup['voucher'], 0, ',', '.') }}
+                                </x-filament::badge>
+                            @endif
                         </div>
                     </div>
 
@@ -140,25 +159,31 @@
         @if($orders->isNotEmpty())
             <div style="margin-top: 16px;">
                 <h4 style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 8px;">
-                    Daftar PO yang Diterbitkan:
+                    Daftar PO yang Diterbitkan (Klik untuk Buka Detail PO):
                 </h4>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px;">
                     @foreach($orders as $o)
-                        <div style="padding: 10px; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.2); background: rgba(148, 163, 184, 0.05); font-size: 11px;">
-                            <div style="display: flex; justify-content: space-between; font-weight: 700;">
-                                <span style="color: #38bdf8; font-family: monospace;">{{ $o->order_number }}</span>
-                                <span style="color: #94a3b8;">{{ $o->created_at->format('H:i') }} WIB</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; margin-top: 4px;">
-                                <span style="color: #94a3b8;">{{ $o->total_items }} Item</span>
-                                <span style="font-weight: 700;">Rp {{ number_format($o->total_amount, 0, ',', '.') }}</span>
-                            </div>
-                            @if($o->notes)
-                                <div style="margin-top: 6px; padding-top: 4px; border-top: 1px dashed rgba(148, 163, 184, 0.2); font-size: 10px; color: #94a3b8; font-style: italic;">
-                                    Catatan: {{ $o->notes }}
+                        <a 
+                            href="{{ \App\Filament\Resources\Orders\OrderResource::getUrl('edit', ['record' => $o->id]) }}"
+                            target="_blank"
+                            style="text-decoration: none; color: inherit; display: block;"
+                        >
+                            <div style="padding: 10px; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.2); background: rgba(148, 163, 184, 0.05); font-size: 11px; transition: all 0.2s;" class="hover:border-primary-500 hover:bg-primary-50/10">
+                                <div style="display: flex; justify-content: space-between; font-weight: 700;">
+                                    <span style="color: #38bdf8; font-family: monospace;">{{ $o->order_number }} ↗</span>
+                                    <span style="color: #94a3b8;">{{ $o->created_at->format('H:i') }} WIB</span>
                                 </div>
-                            @endif
-                        </div>
+                                <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+                                    <span style="color: #94a3b8;">{{ $o->total_items }} Item</span>
+                                    <span style="font-weight: 700;">Rp {{ number_format($o->total_amount, 0, ',', '.') }}</span>
+                                </div>
+                                @if($o->notes)
+                                    <div style="margin-top: 6px; padding-top: 4px; border-top: 1px dashed rgba(148, 163, 184, 0.2); font-size: 10px; color: #94a3b8; font-style: italic;">
+                                        Catatan: {{ $o->notes }}
+                                    </div>
+                                @endif
+                            </div>
+                        </a>
                     @endforeach
                 </div>
             </div>

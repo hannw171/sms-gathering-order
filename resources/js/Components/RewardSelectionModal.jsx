@@ -28,7 +28,7 @@ export default function RewardSelectionModal({
                 <Sparkles className="w-3.5 h-3.5 text-amber-300" />
               </h3>
               <p className="text-[11px] text-brand-200">
-                {unlockedPrograms.length} Pabrikan memenuhi syarat bonus pilihan
+                {unlockedPrograms.length} Pilihan hadiah dapat Anda tentukan
               </p>
             </div>
           </div>

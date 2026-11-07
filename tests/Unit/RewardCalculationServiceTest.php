@@ -177,4 +177,58 @@ class RewardCalculationServiceTest extends TestCase
         $this->assertEquals('Wajan Hitam 24cm (Tier 25 Box)', $res['choice_selections'][0]['selected_option']);
         $this->assertEquals('exeltis', $res['choice_selections'][0]['manufacturer_slug']);
     }
+
+    public function test_multiple_choice_selections_for_interbat_and_graha_neo(): void
+    {
+        // Interbat Rp 5.000.000 (2 Paket = 2 pilihan hadiah)
+        // User selects: Elektrik Kettle and Panci Kuah
+        $res = $this->service->evaluateFromAggregates(
+            ['interbat' => 5000000],
+            [],
+            [
+                [
+                    'interbat' => ['Elektrik Kettle', 'Panci Kuah'],
+                ],
+            ]
+        );
+
+        $this->assertEquals(2, $res['choice_quotas']['interbat']);
+        $this->assertEquals(50000, $res['vouchers_by_manufacturer']['interbat']);
+        $this->assertCount(2, $res['choice_selections']);
+        $this->assertEquals('Elektrik Kettle', $res['choice_selections'][0]['selected_option']);
+        $this->assertEquals('Panci Kuah', $res['choice_selections'][1]['selected_option']);
+
+        // Graha Neo Protifed 50 Box (2 Paket = 2 pilihan hadiah)
+        // User selects: Magic Com Cosmos and Mixer Miyako
+        $resGraha = $this->service->evaluateFromAggregates(
+            ['graha-farma' => 2500000],
+            ['GRH-019' => 50],
+            [
+                [
+                    'graha_neo' => ['Magic Com Cosmos', 'Mixer Miyako'],
+                ],
+            ]
+        );
+
+        $this->assertEquals(2, $resGraha['choice_quotas']['graha_neo']);
+        $this->assertEquals(100000, $resGraha['vouchers_by_manufacturer']['graha-farma']);
+        $this->assertCount(2, $resGraha['choice_selections']);
+        $this->assertEquals('Magic Com Cosmos', $resGraha['choice_selections'][0]['selected_option']);
+        $this->assertEquals('Mixer Miyako', $resGraha['choice_selections'][1]['selected_option']);
+
+        // Individual slot keys: interbat_1 and interbat_2
+        $resSlots = $this->service->evaluateFromAggregates(
+            ['interbat' => 5000000],
+            [],
+            [
+                [
+                    'interbat_1' => 'Elektrik Kettle',
+                    'interbat_2' => 'Panci Kuah',
+                ],
+            ]
+        );
+        $this->assertCount(2, $resSlots['choice_selections']);
+        $this->assertEquals('Elektrik Kettle', $resSlots['choice_selections'][0]['selected_option']);
+        $this->assertEquals('Panci Kuah', $resSlots['choice_selections'][1]['selected_option']);
+    }
 }

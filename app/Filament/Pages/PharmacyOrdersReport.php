@@ -34,6 +34,13 @@ class PharmacyOrdersReport extends Page implements HasTable
 
     protected string $view = 'filament.pages.pharmacy-orders-report';
 
+    public function mount(): void
+    {
+        if (request()->filled('tableSearch')) {
+            $this->tableSearch = (string) request()->query('tableSearch');
+        }
+    }
+
     public function getTitle(): string|Htmlable
     {
         return 'Rekap Belanja Detail Per Apotek';

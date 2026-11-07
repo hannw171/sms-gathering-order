@@ -30,7 +30,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            ->brandName('SMS Gathering Admin')
+            ->brandName('PT. Satria Medika Sejahtera')
             ->colors([
                 'primary' => [
                     50 => '#E3F2FD',

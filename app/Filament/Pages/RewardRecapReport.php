@@ -101,33 +101,43 @@ class RewardRecapReport extends Page implements HasTable
 
                 TextColumn::make('physical_rewards')
                     ->label('Hadiah Langsung')
-                    ->state(function (Pharmacy $record) use ($rewardService): string {
+                    ->state(function (Pharmacy $record) use ($rewardService): array {
                         $res = $rewardService->calculateForPharmacy($record);
                         $items = [];
                         foreach ($res['physical_rewards'] ?? [] as $name => $qty) {
                             $items[] = is_numeric($name) ? (string) $qty : "{$name}: {$qty} pcs";
                         }
 
-                        return implode(', ', $items) ?: '-';
+                        return $items;
                     })
                     ->badge()
-                    ->color(fn (string $state): string => $state !== '-' ? 'warning' : 'gray')
-                    ->wrap(),
+                    ->color('warning')
+                    ->listWithLineBreaks()
+                    ->limitList(3)
+                    ->expandableLimitedList()
+                    ->placeholder('-'),
 
                 TextColumn::make('choice_rewards')
                     ->label('Hadiah Pilihan')
-                    ->state(function (Pharmacy $record) use ($rewardService): string {
+                    ->state(function (Pharmacy $record) use ($rewardService): array {
                         $res = $rewardService->calculateForPharmacy($record);
-                        $choices = array_map(
-                            fn ($c) => ($c['selected_option'] ?? '').' ('.($c['manufacturer_slug'] ?? '').')',
-                            $res['choice_selections'] ?? []
-                        );
+                        $choices = [];
+                        foreach ($res['choice_selections'] ?? [] as $c) {
+                            $opt = $c['selected_option'] ?? '';
+                            $m = $c['manufacturer_slug'] ?? '';
+                            if ($opt) {
+                                $choices[] = $m ? "{$opt} ({$m})" : $opt;
+                            }
+                        }
 
-                        return implode(', ', $choices) ?: '-';
+                        return $choices;
                     })
                     ->badge()
-                    ->color(fn (string $state): string => $state !== '-' ? 'info' : 'gray')
-                    ->wrap(),
+                    ->color('info')
+                    ->listWithLineBreaks()
+                    ->limitList(3)
+                    ->expandableLimitedList()
+                    ->placeholder('-'),
 
                 TextColumn::make('vouchers')
                     ->label('Total Voucher')

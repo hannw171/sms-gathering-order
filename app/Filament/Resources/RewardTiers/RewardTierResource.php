@@ -18,7 +18,13 @@ class RewardTierResource extends Resource
 {
     protected static ?string $model = RewardTier::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTrophy;
+
+    protected static ?string $navigationLabel = 'Tier Hadiah';
+
+    protected static ?string $modelLabel = 'Tier Hadiah';
+
+    protected static ?string $pluralModelLabel = 'Tier Hadiah';
 
     protected static bool $shouldRegisterNavigation = false;
 

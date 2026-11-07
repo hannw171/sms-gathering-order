@@ -81,29 +81,41 @@ export default function Cart({
   const unlockedPrograms = useMemo(() => {
     const list = [];
 
-    if ((unlockedNow.graha_neo_choice_count || 0) > 0) {
-      list.push({
-        key: 'graha_neo',
-        manufacturer: 'PT. GRAHA FARMA',
-        title: 'Neo Protifed Graha Farma',
-        badge: 'Kelipatan 25 Box',
-        description:
-          'Pesanan Neo Protifed Anda mencapai kelipatan 25 Box. Dapatkan Voucher Rp 50.000 + Hadiah Pilihan:',
-        options: unlockedNow.graha_neo_options || rewardOptions?.graha_neo || ['Magic Com Cosmos', 'Mixer Miyako'],
-      });
+    const grahaNeoCount = unlockedNow.graha_neo_choice_count || 0;
+    if (grahaNeoCount > 0) {
+      for (let i = 1; i <= grahaNeoCount; i++) {
+        list.push({
+          key: grahaNeoCount > 1 ? `graha_neo_${i}` : 'graha_neo',
+          baseKey: 'graha_neo',
+          slotIndex: i,
+          slotTotal: grahaNeoCount,
+          manufacturer: 'PT. GRAHA FARMA',
+          title: grahaNeoCount > 1 ? `Neo Protifed Graha (Hadiah #${i})` : 'Neo Protifed Graha Farma',
+          badge: grahaNeoCount > 1 ? `Kelipatan 25 Box #${i}` : 'Kelipatan 25 Box',
+          description:
+            'Pesanan Neo Protifed Anda mencapai kelipatan 25 Box. Dapatkan Voucher Rp 50.000 + Hadiah Pilihan:',
+          options: unlockedNow.graha_neo_options || rewardOptions?.graha_neo || ['Magic Com Cosmos', 'Mixer Miyako'],
+        });
+      }
     }
 
-    if ((unlockedNow.interbat_choice_count || 0) > 0) {
-      list.push({
-        key: 'interbat',
-        manufacturer: 'INTERBAT',
-        title: 'Interbat Generic',
-        badge: 'Paket Rp 2.500.000',
-        description:
-          'Pesanan Anda memenuhi syarat Paket Interbat Generic. Silakan tentukan hadiah pilihan Anda:',
-        options:
-          unlockedNow.interbat_options || rewardOptions?.interbat || ['Elektrik Kettle', 'Panci Kuah', 'Panci Mini Listrik'],
-      });
+    const interbatCount = unlockedNow.interbat_choice_count || 0;
+    if (interbatCount > 0) {
+      for (let i = 1; i <= interbatCount; i++) {
+        list.push({
+          key: interbatCount > 1 ? `interbat_${i}` : 'interbat',
+          baseKey: 'interbat',
+          slotIndex: i,
+          slotTotal: interbatCount,
+          manufacturer: 'INTERBAT',
+          title: interbatCount > 1 ? `Interbat Generic (Hadiah #${i})` : 'Interbat Generic',
+          badge: interbatCount > 1 ? `Paket Rp 2.5 Jt #${i}` : 'Paket Rp 2.500.000',
+          description:
+            'Pesanan Anda memenuhi syarat Paket Interbat Generic. Silakan tentukan hadiah pilihan Anda:',
+          options:
+            unlockedNow.interbat_options || rewardOptions?.interbat || ['Elektrik Kettle', 'Panci Kuah', 'Panci Mini Listrik'],
+        });
+      }
     }
 
     if (
@@ -112,6 +124,9 @@ export default function Cart({
     ) {
       list.push({
         key: 'exeltis_lanso',
+        baseKey: 'exeltis_lanso',
+        slotIndex: 1,
+        slotTotal: 1,
         manufacturer: 'EXELTIS',
         title: 'Lansoprazole (Exeltis)',
         badge: `${unlockedNow.exeltis_lanso_qty} Box`,
@@ -126,6 +141,9 @@ export default function Cart({
     ) {
       list.push({
         key: 'exeltis_sucra',
+        baseKey: 'exeltis_sucra',
+        slotIndex: 1,
+        slotTotal: 1,
         manufacturer: 'EXELTIS',
         title: 'Sucralfate (Exeltis)',
         badge: `${unlockedNow.exeltis_sucra_qty} Botol`,
@@ -161,9 +179,11 @@ export default function Cart({
   const handleConfirmOrder = () => {
     setIsSubmitting(true);
     const rewardSelections = {};
+
     unlockedPrograms.forEach((prog) => {
-      if (selectedChoices[prog.key]) {
-        rewardSelections[prog.key] = selectedChoices[prog.key];
+      const chosen = selectedChoices[prog.key];
+      if (chosen) {
+        rewardSelections[prog.key] = chosen;
       }
     });
 
@@ -254,12 +274,17 @@ export default function Cart({
               {projectedRewards && (
                 <div className="pt-2 border-t border-white/20 space-y-1.5 text-xs">
                   {projectedRewards.total_vouchers > 0 && (
-                    <div className="inline-flex items-center gap-1.5 bg-amber-400/20 text-amber-200 px-2.5 py-1 rounded-lg font-bold border border-amber-300/30">
+                    <div className="inline-flex flex-wrap items-center gap-1.5 bg-amber-400/20 text-amber-200 px-2.5 py-1 rounded-lg font-bold border border-amber-300/30">
                       <span>🎟️</span>
                       <span>
                         Total Voucher Diraih:{' '}
                         {formatRupiah(projectedRewards.total_vouchers)}
                       </span>
+                      {preview?.previous?.total_vouchers > 0 && (
+                        <span className="text-[10px] font-normal text-amber-100 bg-amber-500/30 border border-amber-300/30 px-1.5 py-0.5 rounded">
+                          (+{formatRupiah(Math.max(0, (projectedRewards.total_vouchers || 0) - (preview.previous.total_vouchers || 0)))} dari PO ini)
+                        </span>
+                      )}
                     </div>
                   )}
 
@@ -301,7 +326,7 @@ export default function Cart({
                   <div className="flex items-center gap-2">
                     <Gift className="w-5 h-5 text-blue-600 shrink-0" />
                     <h4 className="font-bold text-xs text-blue-900 uppercase tracking-wide">
-                      🎉 PILIH HADIAH {unlockedPrograms[0].title.toUpperCase()} (1 HADIAH)
+                      🎉 PILIH HADIAH {unlockedPrograms[0].title.toUpperCase()}
                     </h4>
                   </div>
                   <span className="text-[10px] bg-blue-200/80 text-blue-800 font-bold px-2 py-0.5 rounded-full shrink-0">
