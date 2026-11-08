@@ -16,11 +16,7 @@ class GatheringService
         3 => '1 Unit Kipas Angin Cosmos',
     ];
 
-    protected const CACHE_KEY_ALL_LEADERBOARDS = 'gathering_all_leaderboards_v1';
-
-    protected const CACHE_KEY_OVERALL_LEADERBOARD = 'gathering_overall_leaderboard_v1';
-
-    protected const CACHE_KEY_REWARD_TIERS = 'gathering_reward_tiers_v1';
+    protected const CACHE_KEY_ALL_LEADERBOARDS = 'gathering_all_leaderboards_v2';
 
     protected const CACHE_TTL_SECONDS = 5;
 
@@ -30,98 +26,13 @@ class GatheringService
      */
     public function getLeaderboard(?int $manufacturerId = null): Collection
     {
-        if ($manufacturerId === null) {
-            return Cache::remember(self::CACHE_KEY_OVERALL_LEADERBOARD, self::CACHE_TTL_SECONDS, function (): Collection {
-                return $this->computeLeaderboard(null);
-            });
-        }
-
         $all = $this->getAllLeaderboards();
-        if (isset($all['by_manufacturer'][$manufacturerId])) {
-            return $all['by_manufacturer'][$manufacturerId];
+
+        if ($manufacturerId === null) {
+            return $all['overall'];
         }
 
-        return $this->computeLeaderboard($manufacturerId);
-    }
-
-    /**
-     * Compute leaderboard from database for overall or a specific manufacturer.
-     */
-    protected function computeLeaderboard(?int $manufacturerId = null): Collection
-    {
-        $pharmacies = Pharmacy::with(['orders' => function ($q) {
-            $q->where('status', '!=', 'cancelled')
-                ->with(['items' => function ($iq) {
-                    $iq->with('product');
-                }]);
-        }])->get();
-
-        $manufacturer = $manufacturerId ? Manufacturer::find($manufacturerId) : null;
-        $isGraha = $manufacturer && $manufacturer->slug === 'graha-farma';
-
-        $ranked = $pharmacies->map(function ($pharmacy) use ($manufacturerId, $isGraha) {
-            $matchingItems = $pharmacy->orders->flatMap->items
-                ->filter(function ($item) use ($manufacturerId) {
-                    return ! $manufacturerId || ($item->product && (int) $item->product->manufacturer_id === (int) $manufacturerId);
-                });
-
-            if ($manufacturerId) {
-                $totalSpending = (float) $matchingItems->sum('subtotal');
-            } else {
-                $totalSpending = (float) $pharmacy->orders->sum('total_amount');
-            }
-
-            $regulerBox = 0;
-            $paketCount = 0;
-            if ($isGraha) {
-                $regulerBox = (int) $matchingItems->filter(fn ($item) => ($item->product?->sku ?? '') !== 'GRH-019')->sum('quantity');
-                $paketCount = (int) floor($regulerBox / 99);
-            }
-
-            $ordersCount = $pharmacy->orders->count();
-            $firstOrderAt = $pharmacy->orders->min('created_at');
-            $lastOrderAt = $pharmacy->orders->max('created_at');
-
-            return [
-                'id' => $pharmacy->id,
-                'name' => $pharmacy->name,
-                'customer_code' => $pharmacy->customer_code,
-                'city' => $pharmacy->city,
-                'total_spending' => $totalSpending,
-                'paket_count' => $paketCount,
-                'reguler_box' => $regulerBox,
-                'orders_count' => $ordersCount,
-                'first_order_at' => $firstOrderAt,
-                'last_order_at' => $lastOrderAt,
-                'is_checked_in' => (bool) $pharmacy->is_checked_in,
-                'checked_in_at' => $pharmacy->checked_in_at,
-            ];
-        })
-            ->sort(function ($a, $b) use ($isGraha) {
-                if ($isGraha && $b['paket_count'] !== $a['paket_count']) {
-                    return $b['paket_count'] <=> $a['paket_count'];
-                }
-
-                if ($b['total_spending'] !== $a['total_spending']) {
-                    return $b['total_spending'] <=> $a['total_spending'];
-                }
-
-                return ($a['first_order_at'] ?? '9999-99-99') <=> ($b['first_order_at'] ?? '9999-99-99');
-            })
-            ->values();
-
-        // Assign Rank (1, 2, 3, ...) and Grand Prize if Graha
-        return $ranked->map(function ($item, $index) use ($isGraha) {
-            $rank = $index + 1;
-            $item['rank'] = $rank;
-
-            if ($isGraha && $rank <= 3 && $item['paket_count'] >= 1) {
-                $item['grand_prize'] = self::GRAHA_GRAND_PRIZES[$rank] ?? null;
-                $item['grand_prize_title'] = "Juara {$rank}";
-            }
-
-            return $item;
-        });
+        return $all['by_manufacturer'][$manufacturerId] ?? collect();
     }
 
     /**
@@ -142,7 +53,7 @@ class GatheringService
             ->orderBy('sort_order')
             ->get();
 
-        $cachedRankings = Cache::remember(self::CACHE_KEY_ALL_LEADERBOARDS, self::CACHE_TTL_SECONDS, function () use ($manufacturers): array {
+        $cachedData = Cache::remember(self::CACHE_KEY_ALL_LEADERBOARDS, self::CACHE_TTL_SECONDS, function () use ($manufacturers): array {
             $pharmacies = Pharmacy::with(['orders' => function ($q) {
                 $q->where('status', '!=', 'cancelled')
                     ->with(['items' => function ($iq) {
@@ -153,19 +64,21 @@ class GatheringService
             // Calculate Overall
             $allRanked = $pharmacies->map(function ($pharmacy) {
                 $totalSpending = (float) $pharmacy->orders->sum('total_amount');
+                $firstOrder = $pharmacy->orders->min('created_at');
+                $lastOrder = $pharmacy->orders->max('created_at');
 
                 return [
-                    'id' => $pharmacy->id,
-                    'name' => $pharmacy->name,
-                    'customer_code' => $pharmacy->customer_code,
-                    'table_number' => $pharmacy->table_number,
-                    'city' => $pharmacy->city,
-                    'total_spending' => $totalSpending,
-                    'orders_count' => $pharmacy->orders->count(),
-                    'first_order_at' => $pharmacy->orders->min('created_at'),
-                    'last_order_at' => $pharmacy->orders->max('created_at'),
+                    'id' => (int) $pharmacy->id,
+                    'name' => (string) $pharmacy->name,
+                    'customer_code' => (string) $pharmacy->customer_code,
+                    'table_number' => $pharmacy->table_number ? (string) $pharmacy->table_number : null,
+                    'city' => (string) $pharmacy->city,
+                    'total_spending' => (float) $totalSpending,
+                    'orders_count' => (int) $pharmacy->orders->count(),
+                    'first_order_at' => $firstOrder ? $firstOrder->format('Y-m-d H:i:s') : null,
+                    'last_order_at' => $lastOrder ? $lastOrder->format('Y-m-d H:i:s') : null,
                     'is_checked_in' => (bool) $pharmacy->is_checked_in,
-                    'checked_in_at' => $pharmacy->checked_in_at,
+                    'checked_in_at' => $pharmacy->checked_in_at ? $pharmacy->checked_in_at->format('Y-m-d H:i:s') : null,
                 ];
             })
                 ->sort(function ($a, $b) {
@@ -180,7 +93,8 @@ class GatheringService
                     $item['rank'] = $index + 1;
 
                     return $item;
-                });
+                })
+                ->all();
 
             // Calculate for each Manufacturer in memory
             $byManufacturer = [];
@@ -205,20 +119,23 @@ class GatheringService
                         $paketCount = (int) floor($regulerBox / 99);
                     }
 
+                    $firstOrder = $pharmacy->orders->min('created_at');
+                    $lastOrder = $pharmacy->orders->max('created_at');
+
                     return [
-                        'id' => $pharmacy->id,
-                        'name' => $pharmacy->name,
-                        'customer_code' => $pharmacy->customer_code,
-                        'table_number' => $pharmacy->table_number,
-                        'city' => $pharmacy->city,
-                        'total_spending' => $totalSpending,
-                        'paket_count' => $paketCount,
-                        'reguler_box' => $regulerBox,
-                        'orders_count' => $pharmacy->orders->count(),
-                        'first_order_at' => $pharmacy->orders->min('created_at'),
-                        'last_order_at' => $pharmacy->orders->max('created_at'),
+                        'id' => (int) $pharmacy->id,
+                        'name' => (string) $pharmacy->name,
+                        'customer_code' => (string) $pharmacy->customer_code,
+                        'table_number' => $pharmacy->table_number ? (string) $pharmacy->table_number : null,
+                        'city' => (string) $pharmacy->city,
+                        'total_spending' => (float) $totalSpending,
+                        'paket_count' => (int) $paketCount,
+                        'reguler_box' => (int) $regulerBox,
+                        'orders_count' => (int) $pharmacy->orders->count(),
+                        'first_order_at' => $firstOrder ? $firstOrder->format('Y-m-d H:i:s') : null,
+                        'last_order_at' => $lastOrder ? $lastOrder->format('Y-m-d H:i:s') : null,
                         'is_checked_in' => (bool) $pharmacy->is_checked_in,
-                        'checked_in_at' => $pharmacy->checked_in_at,
+                        'checked_in_at' => $pharmacy->checked_in_at ? $pharmacy->checked_in_at->format('Y-m-d H:i:s') : null,
                     ];
                 })
                     ->sort(function ($a, $b) use ($isGraha) {
@@ -243,16 +160,17 @@ class GatheringService
                         }
 
                         return $item;
-                    });
+                    })
+                    ->all();
 
                 $byManufacturer[$mId] = $mRanked;
                 $statsByManufacturer[$mId] = [
-                    'total_gmv' => (float) $mRanked->sum('total_spending'),
+                    'total_gmv' => (float) array_sum(array_column($mRanked, 'total_spending')),
                 ];
             }
 
-            $totalGmv = (float) $allRanked->sum('total_spending');
-            $totalOrders = (int) $allRanked->sum('orders_count');
+            $totalGmv = (float) array_sum(array_column($allRanked, 'total_spending'));
+            $totalOrders = (int) array_sum(array_column($allRanked, 'orders_count'));
 
             return [
                 'overall' => $allRanked,
@@ -263,13 +181,20 @@ class GatheringService
             ];
         });
 
+        // Convert the primitive arrays back to Collections on the fly
+        $overallCollection = collect($cachedData['overall'] ?? []);
+        $byManufacturerCollections = [];
+        foreach (($cachedData['by_manufacturer'] ?? []) as $mId => $list) {
+            $byManufacturerCollections[$mId] = collect($list);
+        }
+
         return [
-            'overall' => $cachedRankings['overall'],
-            'by_manufacturer' => $cachedRankings['by_manufacturer'],
-            'stats_by_manufacturer' => $cachedRankings['stats_by_manufacturer'],
+            'overall' => $overallCollection,
+            'by_manufacturer' => $byManufacturerCollections,
+            'stats_by_manufacturer' => $cachedData['stats_by_manufacturer'] ?? [],
             'manufacturers' => $manufacturers,
-            'total_gmv' => $cachedRankings['total_gmv'],
-            'total_orders' => $cachedRankings['total_orders'],
+            'total_gmv' => (float) ($cachedData['total_gmv'] ?? 0.0),
+            'total_orders' => (int) ($cachedData['total_orders'] ?? 0),
         ];
     }
 
@@ -279,8 +204,6 @@ class GatheringService
     public function flushLeaderboardCache(): void
     {
         Cache::forget(self::CACHE_KEY_ALL_LEADERBOARDS);
-        Cache::forget(self::CACHE_KEY_OVERALL_LEADERBOARD);
-        Cache::forget(self::CACHE_KEY_REWARD_TIERS);
         RewardCalculationService::clearGrandPrizeCache();
     }
 
@@ -289,13 +212,13 @@ class GatheringService
      */
     public function getPharmacyMilestone(Pharmacy $pharmacy): array
     {
-        $allLeaderboards = Cache::get(self::CACHE_KEY_ALL_LEADERBOARDS);
-        $leaderboard = $allLeaderboards ? $allLeaderboards['overall'] : $this->getLeaderboard();
+        $all = $this->getAllLeaderboards();
+        $leaderboard = $all['overall'];
         $rankEntry = $leaderboard->firstWhere('id', $pharmacy->id);
         $currentRank = $rankEntry ? $rankEntry['rank'] : $leaderboard->count() + 1;
         $totalSpending = $rankEntry ? $rankEntry['total_spending'] : 0.0;
 
-        $tiers = Cache::remember(self::CACHE_KEY_REWARD_TIERS, 60, fn () => RewardTier::orderBy('min_spending', 'asc')->get());
+        $tiers = RewardTier::orderBy('min_spending', 'asc')->get();
 
         $unlockedTier = null;
         $nextTier = null;

@@ -122,7 +122,7 @@ class RewardCalculationService
      */
     protected static ?array $grahaGrandPrizeWinnersCache = null;
 
-    protected const CACHE_KEY_GRAHA_GRAND_PRIZES = 'gathering_graha_grand_prizes_v1';
+    protected const CACHE_KEY_GRAHA_GRAND_PRIZES = 'gathering_graha_grand_prizes_v2';
 
     protected const CACHE_TTL_SECONDS = 5;
 
