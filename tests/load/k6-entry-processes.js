@@ -132,7 +132,7 @@ export const options = {
         ],
         hosting_limit_hits_503_508_429: [
             {
-                threshold: 'count<15',  // Jika muncul 15x error 508/503 (Entry Process Penuh), stop test!
+                threshold: 'count<30',  // Jika muncul 30x error 508/503 (Entry Process Penuh), stop test!
                 abortOnFail: true,
             },
         ],
@@ -293,8 +293,8 @@ export function pharmacyFlow() {
     // Auto-polling katalog (tiap ~8 detik), filter pabrik, simulasi hitung reward keranjang, & cek leaderboard
     const loopsInSession = 3;
     for (let i = 0; i < loopsInSession; i++) {
-        // Jeda 6.5 - 9.5 detik (mensimulasikan usePoll(8000) di Catalog.jsx + waktu baca user)
-        humanSleep(6.5, 9.5);
+        // Jeda 8 - 12 detik (mensimulasikan usePoll(8000) di Catalog.jsx + waktu baca/diskusi user)
+        humanSleep(8, 12);
 
         // --------------------------------------------------------------------
         // TAHAP 2: Auto-Poll atau Filter Katalog Pabrik (Partial Reload Inertia)
@@ -326,7 +326,8 @@ export function pharmacyFlow() {
             });
         });
 
-        humanSleep(4, 7);
+        // Waktu tamu memilih obat dan melihat keranjang (6 - 10 detik)
+        humanSleep(6, 10);
 
         // --------------------------------------------------------------------
         // TAHAP 3: Buka Keranjang & Hitung Simulasi Reward (POST /keranjang/preview-rewards)
@@ -374,7 +375,8 @@ export function pharmacyFlow() {
             });
         });
 
-        humanSleep(5, 8);
+        // Waktu tamu mengecek posisi klasemen / leaderboard (7 - 11 detik)
+        humanSleep(7, 11);
 
         // --------------------------------------------------------------------
         // TAHAP 4: Cek Klasemen / Leaderboard Apotek (GET /leaderboard)

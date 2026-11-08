@@ -18,7 +18,7 @@ class GatheringService
 
     protected const CACHE_KEY_ALL_LEADERBOARDS = 'gathering_all_leaderboards_v2';
 
-    protected const CACHE_TTL_SECONDS = 5;
+    protected const CACHE_TTL_SECONDS = 60;
 
     /**
      * Get the real-time leaderboard of pharmacies sorted by total spending.

@@ -124,7 +124,7 @@ class RewardCalculationService
 
     protected const CACHE_KEY_GRAHA_GRAND_PRIZES = 'gathering_graha_grand_prizes_v2';
 
-    protected const CACHE_TTL_SECONDS = 5;
+    protected const CACHE_TTL_SECONDS = 60;
 
     public static function clearGrandPrizeCache(): void
     {
@@ -216,7 +216,7 @@ class RewardCalculationService
     /**
      * Calculate cumulative rewards for a pharmacy across all active orders.
      */
-    public function calculateForPharmacy(Pharmacy $pharmacy): array
+    public function calculateForPharmacy(Pharmacy $pharmacy, bool $includeGrandPrize = true): array
     {
         if ($pharmacy->relationLoaded('orders')) {
             $orders = $pharmacy->orders->where('status', '!=', 'cancelled');
@@ -230,10 +230,12 @@ class RewardCalculationService
         $results = $this->evaluateOrders($orders);
 
         // Inject Grand Prize for Graha Farma if this pharmacy is in Top 3
-        $grandPrizeWinners = $this->getGrahaGrandPrizeWinners();
-        if (isset($grandPrizeWinners[$pharmacy->id])) {
-            $winner = $grandPrizeWinners[$pharmacy->id];
-            $results['physical_rewards'][$winner['prize']] = 1;
+        if ($includeGrandPrize) {
+            $grandPrizeWinners = $this->getGrahaGrandPrizeWinners();
+            if (isset($grandPrizeWinners[$pharmacy->id])) {
+                $winner = $grandPrizeWinners[$pharmacy->id];
+                $results['physical_rewards'][$winner['prize']] = 1;
+            }
         }
 
         return $results;
@@ -309,8 +311,8 @@ class RewardCalculationService
      */
     public function evaluateCart(array $cartItems, ?Pharmacy $pharmacy = null): array
     {
-        // 1. Calculate previous rewards
-        $previousRewards = $pharmacy ? $this->calculateForPharmacy($pharmacy) : $this->getEmptyRewardSummary();
+        // 1. Calculate previous rewards without heavy grand prize ranking recalculation for cart preview
+        $previousRewards = $pharmacy ? $this->calculateForPharmacy($pharmacy, false) : $this->getEmptyRewardSummary();
 
         // 2. Aggregate cart items by manufacturer and product
         $cartAggregates = $this->aggregateCartItems($cartItems);
