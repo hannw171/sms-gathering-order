@@ -28,8 +28,8 @@ export default function Leaderboard({
   myStandings,
   event,
 }) {
-  // Auto-poll leaderboard every 5 seconds for real-time ranking updates
-  usePoll(5000, {
+  // Auto-poll leaderboard every 8 seconds for real-time ranking updates
+  usePoll(8000, {
     only: [
       'leaderboard',
       'leaderboards_by_manufacturer',

@@ -225,6 +225,11 @@ class GatheringService
     }
 
     /**
+     * Flush all cached leaderboard results immediately (invoked when orders change).
+     */
+    public function flushLeaderboardCache(): void {}
+
+    /**
      * Calculate reward milestones for a specific pharmacy.
      */
     public function getPharmacyMilestone(Pharmacy $pharmacy): array

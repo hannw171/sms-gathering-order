@@ -9,6 +9,19 @@ class EventSetting extends Model
 {
     use HasFactory;
 
+    protected static ?self $currentInstance = null;
+
+    protected static function booted(): void
+    {
+        static::saved(function () {
+            static::$currentInstance = null;
+        });
+
+        static::deleted(function () {
+            static::$currentInstance = null;
+        });
+    }
+
     protected $fillable = [
         'event_name',
         'venue_name',
@@ -69,7 +82,11 @@ class EventSetting extends Model
 
     public static function current(): self
     {
-        return self::firstOrCreate(
+        if (static::$currentInstance !== null) {
+            return static::$currentInstance;
+        }
+
+        return static::$currentInstance = self::firstOrCreate(
             ['id' => 1],
             [
                 'event_name' => 'SMS Gathering & Order Night 2026',

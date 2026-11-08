@@ -20,8 +20,8 @@ export default function Catalog({
   const [search, setSearch] = useState(searchQuery || '');
   const { cart, totalItems, totalAmount, getItemQuantity, updateQuantity } = useCart();
 
-  // Auto-poll catalog every 4 seconds for real-time manufacturer session updates
-  usePoll(4000, {
+  // Auto-poll catalog every 8 seconds for real-time manufacturer session updates
+  usePoll(8000, {
     only: [
       'manufacturers',
       'products',

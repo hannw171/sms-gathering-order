@@ -29,8 +29,8 @@ export default function Cart({
   event,
   errors,
 }) {
-  // Auto-poll cart every 4 seconds to sync manufacturer session state in real-time
-  usePoll(4000, {
+  // Auto-poll cart every 8 seconds to sync manufacturer session state in real-time
+  usePoll(8000, {
     only: ['manufacturers', 'event'],
   });
 
