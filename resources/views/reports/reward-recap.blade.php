@@ -178,7 +178,7 @@
         </div>
         <div class="signature-box">
             <div>Mengetahui / Menyetujui,</div>
-            <div class="signature-line">Pimpinan PT Satria Medika Sejahtera</div>
+            <div class="signature-line">Pimpinan PT. Satria Medika Sejahtera</div>
         </div>
     </div>
 @endsection

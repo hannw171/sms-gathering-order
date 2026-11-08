@@ -260,8 +260,8 @@ export default function StageLeaderboard({
               <span className="bg-brand-50 text-brand-700 border border-brand-200 text-[10px] lg:text-xs font-black px-2.5 py-0.5 rounded-full tracking-widest uppercase">
                 LIVE GATHERING 2026
               </span>
-              <span className="text-xs text-slate-500 font-mono tracking-wider hidden sm:inline">
-                SMS MEDIKA SURABAYA
+              <span className="text-xs text-slate-500 font-semibold tracking-wider hidden sm:inline">
+                PT. Satria Medika Sejahtera
               </span>
             </div>
             <h1 className="text-2xl lg:text-3xl font-black text-brand-900 tracking-tight mt-0.5">

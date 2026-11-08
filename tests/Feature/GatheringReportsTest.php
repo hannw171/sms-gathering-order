@@ -212,7 +212,7 @@ class GatheringReportsTest extends TestCase
         foreach ($routes as $url => $expectedText) {
             $this->get($url)
                 ->assertSuccessful()
-                ->assertSee('PT SATRIA MEDIKA SEJAHTERA')
+                ->assertSee('PT. SATRIA MEDIKA SEJAHTERA')
                 ->assertSee($expectedText);
         }
 

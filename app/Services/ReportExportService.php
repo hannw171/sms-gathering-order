@@ -200,7 +200,7 @@ class ReportExportService
         $event = EventSetting::current();
         $nowStr = now()->translatedFormat('l, d F Y - H:i').' WIB';
 
-        $writer->addRow(Row::fromValues(['PT SATRIA MEDIKA SEJAHTERA'], $styles['company']));
+        $writer->addRow(Row::fromValues(['PT. SATRIA MEDIKA SEJAHTERA'], $styles['company']));
         $writer->addRow(Row::fromValues([strtoupper($reportTitle)], $styles['title']));
         $writer->addRow(Row::fromValues(["Acara: {$event->event_name}  |  Tanggal Cetak: {$nowStr}"], $styles['meta']));
         $writer->addRow(Row::fromValues([$summaryLine], $styles['section']));

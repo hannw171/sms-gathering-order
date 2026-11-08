@@ -195,7 +195,7 @@
     <div class="signature-grid" style="margin-top: 20px;">
         <div class="signature-box">
             <div>Diserahkan Oleh,</div>
-            <div class="text-muted" style="font-size: 9.5px;">Panitia PT Satria Medika Sejahtera</div>
+            <div class="text-muted" style="font-size: 9.5px;">Panitia PT. Satria Medika Sejahtera</div>
             <div class="signature-line">( ............................................ )</div>
         </div>
         <div class="signature-box">

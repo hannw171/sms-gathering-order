@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $reportTitle ?? 'Laporan Gathering' }} - PT SATRIA MEDIKA SEJAHTERA</title>
+    <title>{{ $reportTitle ?? 'Laporan Gathering' }} - PT. SATRIA MEDIKA SEJAHTERA</title>
     <style id="page-orientation-style">
         @page {
             size: A4 {{ $defaultOrientation ?? 'portrait' }};
@@ -400,7 +400,7 @@
     <div class="page-sheet">
         <div class="report-header">
             <div>
-                <h1 class="company-name">PT SATRIA MEDIKA SEJAHTERA</h1>
+                <h1 class="company-name">PT. SATRIA MEDIKA SEJAHTERA</h1>
                 <h2 class="report-title">{{ $reportTitle ?? 'LAPORAN REKAPITULASI GATHERING' }}</h2>
             </div>
             <div class="header-right">
