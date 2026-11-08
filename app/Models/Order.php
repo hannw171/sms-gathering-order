@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\GatheringService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,6 +29,17 @@ class Order extends Model
         'total_items' => 'integer',
         'reward_selections' => 'array',
     ];
+
+    protected static function booted(): void
+    {
+        static::saved(function () {
+            app(GatheringService::class)->flushLeaderboardCache();
+        });
+
+        static::deleted(function () {
+            app(GatheringService::class)->flushLeaderboardCache();
+        });
+    }
 
     public function pharmacy(): BelongsTo
     {

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\GatheringService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -33,6 +34,17 @@ class Pharmacy extends Model
         'last_active_at' => 'datetime',
         'reward_handed_over_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::saved(function () {
+            app(GatheringService::class)->flushLeaderboardCache();
+        });
+
+        static::deleted(function () {
+            app(GatheringService::class)->flushLeaderboardCache();
+        });
+    }
 
     public function orders(): HasMany
     {

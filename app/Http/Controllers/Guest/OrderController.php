@@ -32,7 +32,11 @@ class OrderController extends Controller
             return redirect()->route('guest.login');
         }
 
-        $pharmacy = Pharmacy::find($pharmacyId);
+        $pharmacy = Pharmacy::with(['orders' => function ($q) {
+            $q->where('status', '!=', 'cancelled')
+                ->with(['items.product.manufacturer']);
+        }])->find($pharmacyId);
+
         if (! $pharmacy) {
             return redirect()->route('guest.login');
         }
@@ -88,8 +92,14 @@ class OrderController extends Controller
         ]);
 
         // Validate manufacturer-specific session availability, min_order, and step
+        $productIds = array_values(array_filter(array_map(fn ($item) => (int) ($item['product_id'] ?? 0), $request->items)));
+        $productsById = Product::with('manufacturer')
+            ->whereIn('id', $productIds)
+            ->get()
+            ->keyBy('id');
+
         foreach ($request->items as $item) {
-            $product = Product::with('manufacturer')->findOrFail($item['product_id']);
+            $product = $productsById->get((int) $item['product_id']) ?? Product::with('manufacturer')->findOrFail($item['product_id']);
             if ($product->manufacturer && ! $product->manufacturer->isOrderingOpen()) {
                 $mStatus = $product->manufacturer->getOrderingStatus();
                 $mName = $product->manufacturer->name;
@@ -110,13 +120,13 @@ class OrderController extends Controller
             }
         }
 
-        $order = DB::transaction(function () use ($request, $pharmacy) {
+        $order = DB::transaction(function () use ($request, $pharmacy, $productsById) {
             $totalAmount = 0;
             $totalItems = 0;
             $orderItemsData = [];
 
             foreach ($request->items as $item) {
-                $product = Product::with('manufacturer')->findOrFail($item['product_id']);
+                $product = $productsById->get((int) $item['product_id']) ?? Product::with('manufacturer')->findOrFail($item['product_id']);
                 $qty = (int) $item['quantity'];
                 $subtotal = (float) $product->price * $qty;
 
@@ -186,7 +196,11 @@ class OrderController extends Controller
             return redirect()->route('guest.login');
         }
 
-        $pharmacy = Pharmacy::find($pharmacyId);
+        $pharmacy = Pharmacy::with(['orders' => function ($q) {
+            $q->where('status', '!=', 'cancelled')
+                ->with(['items.product.manufacturer']);
+        }])->find($pharmacyId);
+
         if (! $pharmacy) {
             return redirect()->route('guest.login');
         }
@@ -237,7 +251,7 @@ class OrderController extends Controller
     public function previewRewards(Request $request): JsonResponse
     {
         $pharmacyId = $request->session()->get('guest_pharmacy_id');
-        $pharmacy = $pharmacyId ? Pharmacy::find($pharmacyId) : null;
+        $pharmacy = $request->attributes->get('guest_pharmacy') ?? ($pharmacyId ? Pharmacy::find($pharmacyId) : null);
         $items = $request->input('items', []);
 
         $result = $this->rewardService->evaluateCart($items, $pharmacy);

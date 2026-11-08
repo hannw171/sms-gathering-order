@@ -7,6 +7,7 @@ use App\Models\Pharmacy;
 use App\Models\Product;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class RewardCalculationService
 {
@@ -121,9 +122,14 @@ class RewardCalculationService
      */
     protected static ?array $grahaGrandPrizeWinnersCache = null;
 
+    protected const CACHE_KEY_GRAHA_GRAND_PRIZES = 'gathering_graha_grand_prizes_v1';
+
+    protected const CACHE_TTL_SECONDS = 5;
+
     public static function clearGrandPrizeCache(): void
     {
         self::$grahaGrandPrizeWinnersCache = null;
+        Cache::forget(self::CACHE_KEY_GRAHA_GRAND_PRIZES);
     }
 
     /**
@@ -137,66 +143,72 @@ class RewardCalculationService
             return self::$grahaGrandPrizeWinnersCache;
         }
 
-        $pharmacies = Pharmacy::whereHas('orders', fn ($q) => $q->where('status', '!=', 'cancelled'))
-            ->with(['orders' => function ($q) {
-                $q->where('status', '!=', 'cancelled')
-                    ->with(['items.product']);
-            }])
-            ->get();
+        self::$grahaGrandPrizeWinnersCache = Cache::remember(
+            self::CACHE_KEY_GRAHA_GRAND_PRIZES,
+            self::CACHE_TTL_SECONDS,
+            function (): array {
+                $pharmacies = Pharmacy::whereHas('orders', fn ($q) => $q->where('status', '!=', 'cancelled'))
+                    ->with(['orders' => function ($q) {
+                        $q->where('status', '!=', 'cancelled')
+                            ->with(['items.product']);
+                    }])
+                    ->get();
 
-        $ranked = $pharmacies->map(function ($pharmacy) {
-            $grahaRegulerBox = 0;
-            foreach ($pharmacy->orders as $order) {
-                foreach ($order->items as $item) {
-                    $sku = $item->product?->sku ?? '';
-                    if (str_starts_with($sku, 'GRH-') && $sku !== 'GRH-019') {
-                        $grahaRegulerBox += (int) $item->quantity;
+                $ranked = $pharmacies->map(function ($pharmacy) {
+                    $grahaRegulerBox = 0;
+                    foreach ($pharmacy->orders as $order) {
+                        foreach ($order->items as $item) {
+                            $sku = $item->product?->sku ?? '';
+                            if (str_starts_with($sku, 'GRH-') && $sku !== 'GRH-019') {
+                                $grahaRegulerBox += (int) $item->quantity;
+                            }
+                        }
                     }
+
+                    $paketCount = (int) floor($grahaRegulerBox / 99);
+                    $firstOrderAt = $pharmacy->orders->min('created_at');
+
+                    return [
+                        'pharmacy_id' => $pharmacy->id,
+                        'paket_count' => $paketCount,
+                        'reguler_box' => $grahaRegulerBox,
+                        'first_order_at' => $firstOrderAt,
+                    ];
+                })
+                    ->filter(fn ($item) => $item['paket_count'] >= 1)
+                    ->sort(function ($a, $b) {
+                        if ($b['paket_count'] !== $a['paket_count']) {
+                            return $b['paket_count'] <=> $a['paket_count'];
+                        }
+                        if ($b['reguler_box'] !== $a['reguler_box']) {
+                            return $b['reguler_box'] <=> $a['reguler_box'];
+                        }
+
+                        return ($a['first_order_at'] ?? '9999-99-99') <=> ($b['first_order_at'] ?? '9999-99-99');
+                    })
+                    ->values()
+                    ->take(3);
+
+                $prizes = [
+                    1 => '1 Unit Smart TV Polytron 32 Inch (Grand Prize Graha Farma #1)',
+                    2 => '1 Unit Dispenser Cosmos Galon Bawah (Grand Prize Graha Farma #2)',
+                    3 => '1 Unit Kipas Angin Cosmos (Grand Prize Graha Farma #3)',
+                ];
+
+                $winners = [];
+                foreach ($ranked as $idx => $entry) {
+                    $rank = $idx + 1;
+                    $winners[$entry['pharmacy_id']] = [
+                        'rank' => $rank,
+                        'prize' => $prizes[$rank],
+                        'paket_count' => $entry['paket_count'],
+                        'reguler_box' => $entry['reguler_box'],
+                    ];
                 }
+
+                return $winners;
             }
-
-            $paketCount = (int) floor($grahaRegulerBox / 99);
-            $firstOrderAt = $pharmacy->orders->min('created_at');
-
-            return [
-                'pharmacy_id' => $pharmacy->id,
-                'paket_count' => $paketCount,
-                'reguler_box' => $grahaRegulerBox,
-                'first_order_at' => $firstOrderAt,
-            ];
-        })
-            ->filter(fn ($item) => $item['paket_count'] >= 1)
-            ->sort(function ($a, $b) {
-                if ($b['paket_count'] !== $a['paket_count']) {
-                    return $b['paket_count'] <=> $a['paket_count'];
-                }
-                if ($b['reguler_box'] !== $a['reguler_box']) {
-                    return $b['reguler_box'] <=> $a['reguler_box'];
-                }
-
-                return ($a['first_order_at'] ?? '9999-99-99') <=> ($b['first_order_at'] ?? '9999-99-99');
-            })
-            ->values()
-            ->take(3);
-
-        $prizes = [
-            1 => '1 Unit Smart TV Polytron 32 Inch (Grand Prize Graha Farma #1)',
-            2 => '1 Unit Dispenser Cosmos Galon Bawah (Grand Prize Graha Farma #2)',
-            3 => '1 Unit Kipas Angin Cosmos (Grand Prize Graha Farma #3)',
-        ];
-
-        $winners = [];
-        foreach ($ranked as $idx => $entry) {
-            $rank = $idx + 1;
-            $winners[$entry['pharmacy_id']] = [
-                'rank' => $rank,
-                'prize' => $prizes[$rank],
-                'paket_count' => $entry['paket_count'],
-                'reguler_box' => $entry['reguler_box'],
-            ];
-        }
-
-        self::$grahaGrandPrizeWinnersCache = $winners;
+        );
 
         return self::$grahaGrandPrizeWinnersCache;
     }
@@ -805,8 +817,22 @@ class RewardCalculationService
         $qtyBySku = [];
         $selectedChoices = [];
 
+        $productIds = array_values(array_filter(array_map(fn ($item) => (int) ($item['product_id'] ?? 0), $cartItems)));
+        if (empty($productIds)) {
+            return [
+                'spending_by_manufacturer' => $spendingByM,
+                'qty_by_sku' => $qtyBySku,
+                'selected_choices' => $selectedChoices,
+            ];
+        }
+
+        $productsById = Product::with('manufacturer')
+            ->whereIn('id', $productIds)
+            ->get()
+            ->keyBy('id');
+
         foreach ($cartItems as $item) {
-            $product = Product::with('manufacturer')->find($item['product_id'] ?? 0);
+            $product = $productsById->get((int) ($item['product_id'] ?? 0));
             if (! $product) {
                 continue;
             }

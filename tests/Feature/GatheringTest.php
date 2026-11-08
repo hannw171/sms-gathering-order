@@ -825,4 +825,34 @@ class GatheringTest extends TestCase
         $this->assertEquals(150, $preview['unlocked_now']['exeltis_sucra_qty']);
         $this->assertNotEmpty($preview['unlocked_now']['exeltis_sucra_options']);
     }
+
+    public function test_leaderboard_micro_cache_invalidates_immediately_on_new_order(): void
+    {
+        $service = app(GatheringService::class);
+
+        // Prime cache
+        $initial = $service->getAllLeaderboards();
+        $entryBefore = $initial['overall']->firstWhere('id', $this->pharmacy->id);
+        $this->assertEquals(0, $entryBefore['total_spending']);
+        $this->assertEquals(0, $initial['total_gmv']);
+
+        // Create an order via checkout
+        $this->withSession(['guest_pharmacy_id' => $this->pharmacy->id])
+            ->post('/checkout', [
+                'items' => [
+                    [
+                        'product_id' => $this->product->id,
+                        'quantity' => 4,
+                    ],
+                ],
+            ])
+            ->assertRedirect();
+
+        // Subsequent call must immediately reflect new spending without waiting for TTL
+        $after = $service->getAllLeaderboards();
+        $entryAfter = $after['overall']->firstWhere('id', $this->pharmacy->id);
+        $this->assertEquals(800000, $entryAfter['total_spending']);
+        $this->assertEquals(800000, $after['total_gmv']);
+        $this->assertEquals(1, $after['total_orders']);
+    }
 }

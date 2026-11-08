@@ -41,6 +41,10 @@ class EnsureGuestPharmacySession
         $tokenInSession = $request->session()->get('guest_device_token');
         $tokenInDb = $pharmacy->device_session_token;
 
+        if (! $tokenInDb || $tokenInSession === $tokenInDb) {
+            $request->attributes->set('guest_pharmacy', $pharmacy);
+        }
+
         // Check if device session was taken over by another device
         if ($tokenInDb && $tokenInSession !== $tokenInDb) {
             $request->session()->forget(['guest_pharmacy_id', 'guest_device_token']);

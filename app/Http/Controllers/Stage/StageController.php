@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Stage;
 
 use App\Http\Controllers\Controller;
 use App\Models\EventSetting;
-use App\Models\Order;
 use App\Services\GatheringService;
 use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
@@ -21,17 +20,14 @@ class StageController extends Controller
         $eventSetting = EventSetting::current();
         $leaderboardData = $this->gatheringService->getAllLeaderboards();
 
-        $totalGmv = (float) Order::where('status', '!=', 'cancelled')->sum('total_amount');
-        $totalOrders = (int) Order::where('status', '!=', 'cancelled')->count();
-
         return Inertia::render('Stage/Leaderboard', [
             'leaderboard' => $leaderboardData['overall'],
             'leaderboards_by_manufacturer' => $leaderboardData['by_manufacturer'],
             'stats_by_manufacturer' => $leaderboardData['stats_by_manufacturer'],
             'manufacturers' => $leaderboardData['manufacturers'],
             'stats' => [
-                'total_gmv' => $totalGmv,
-                'total_orders' => $totalOrders,
+                'total_gmv' => $leaderboardData['total_gmv'],
+                'total_orders' => $leaderboardData['total_orders'],
             ],
             'event' => [
                 'name' => $eventSetting->event_name,
@@ -53,17 +49,14 @@ class StageController extends Controller
         $eventSetting = EventSetting::current();
         $leaderboardData = $this->gatheringService->getAllLeaderboards();
 
-        $totalGmv = (float) Order::where('status', '!=', 'cancelled')->sum('total_amount');
-        $totalOrders = (int) Order::where('status', '!=', 'cancelled')->count();
-
         return response()->json([
             'leaderboard' => $leaderboardData['overall'],
             'leaderboards_by_manufacturer' => $leaderboardData['by_manufacturer'],
             'stats_by_manufacturer' => $leaderboardData['stats_by_manufacturer'],
             'manufacturers' => $leaderboardData['manufacturers'],
             'stats' => [
-                'total_gmv' => $totalGmv,
-                'total_orders' => $totalOrders,
+                'total_gmv' => $leaderboardData['total_gmv'],
+                'total_orders' => $leaderboardData['total_orders'],
             ],
             'event' => [
                 'name' => $eventSetting->event_name,

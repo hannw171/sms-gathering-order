@@ -28,7 +28,11 @@ class CatalogController extends Controller
             return redirect()->route('guest.login');
         }
 
-        $pharmacy = Pharmacy::find($pharmacyId);
+        $pharmacy = Pharmacy::with(['orders' => function ($q) {
+            $q->where('status', '!=', 'cancelled')
+                ->with(['items.product.manufacturer']);
+        }])->find($pharmacyId);
+
         if (! $pharmacy) {
             $request->session()->forget('guest_pharmacy_id');
 
@@ -75,7 +79,7 @@ class CatalogController extends Controller
         // Milestone and Reward Tracker Data
         $milestone = $this->gatheringService->getPharmacyMilestone($pharmacy);
         $currentRewards = $this->rewardService->calculateForPharmacy($pharmacy);
-        $ordersCount = $pharmacy->orders()->where('status', '!=', 'cancelled')->count();
+        $ordersCount = $pharmacy->orders->count();
         $eventSetting = EventSetting::current();
 
         return Inertia::render('Guest/Catalog', [

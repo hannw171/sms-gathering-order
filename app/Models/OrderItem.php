@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\GatheringService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,6 +27,17 @@ class OrderItem extends Model
         'quantity' => 'integer',
         'subtotal' => 'decimal:2',
     ];
+
+    protected static function booted(): void
+    {
+        static::saved(function () {
+            app(GatheringService::class)->flushLeaderboardCache();
+        });
+
+        static::deleted(function () {
+            app(GatheringService::class)->flushLeaderboardCache();
+        });
+    }
 
     public function order(): BelongsTo
     {
